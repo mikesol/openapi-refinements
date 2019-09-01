@@ -33,7 +33,7 @@ const _includeCodes = (
   ...p,
   ...__includeCodes(method, p[method], r)
 });
-export const includeCodes = (
+const includeCodesInternal = (
   o: OpenAPIObject,
   info: [string, Meth],
   r: (keyof Responses)[]
@@ -51,6 +51,14 @@ export const includeCodes = (
     : {})
 });
 
+
+export const includeCodes = (
+  info: [string, Meth] | string,
+  r: (keyof Responses)[]
+) => (o: OpenAPIObject): OpenAPIObject =>
+  typeof info === "string" ?
+  metha.reduce((a, b) => includeCodesInternal(a, [info, b], r), o)
+ : includeCodesInternal(o, info, r);
 // removeCodes
 
 const removeCode = (r: Responses, c: keyof Responses) => {
@@ -101,10 +109,10 @@ const removeCodesInternal = (
 });
 
 export const removeCodes = (
-  o: OpenAPIObject,
   info: [string, Meth] | string,
   r: (keyof Responses)[]
-): OpenAPIObject =>
+) => (o: OpenAPIObject): OpenAPIObject =>
   typeof info === "string" ?
   metha.reduce((a, b) => removeCodesInternal(a, [info, b], r), o)
  : removeCodesInternal(o, info, r);
+
