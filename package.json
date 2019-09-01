@@ -12,7 +12,9 @@
     "typescript": "^3.6.2"
   },
   "dependencies": {
-    "loas3": "^0.1.1"
+    "fp-ts": "^2.0.5",
+    "loas3": "^0.1.1",
+    "monocle-ts": "^2.0.0"
   },
   "scripts": {
     "lint:fix": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

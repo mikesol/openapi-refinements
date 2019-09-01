@@ -5,51 +5,43 @@ import {
   Responses
 } from "loas3/dist/generated/full";
 
+import { array } from "fp-ts/lib/Array";
+import { Lens, Iso, fromTraversable, Optional } from "monocle-ts";
+const objectToArray = <T>() =>
+  new Iso<Record<string, T>, [string, T][]>(
+    s => Object.entries(s),
+    a => a.reduce((q, r) => ({ ...q, [r[0]]: r[1] }), {})
+  );
+
+const valueLens = <T>() =>
+  new Lens<[string, T], T>(s => s[1], a => s => [s[0], a]);
+
 type Meth = "get" | "post" | "put" | "delete";
 const metha: Meth[] = ["get", "post", "put", "delete"];
 
-// include codes
-const __includeCodes = (
-  n: Meth,
-  o: Operation | undefined,
-  r: (keyof Responses)[]
-): Record<Meth, Operation> | {} =>
-  o
-    ? {
-        [n]: {
-          ...o,
-          responses: r
-            .map(i => ({ [i]: o.responses[i] }))
-            .reduce((a, b) => ({ ...a, ...b }), {})
-        }
-      }
-    : {};
+const codesInternal = (
+  o: OpenAPIObject,
+  info: [string, Meth],
+  responsesMap: (z: Responses) => Responses
+) =>
+  Lens.fromProp<OpenAPIObject>()("paths")
+    .composeIso(objectToArray())
+    .composeTraversal(
+      fromTraversable(array)<[string, PathItem]>().filter(i => i[0] === info[0])
+    )
+    .composeLens(valueLens())
+    .composeOptional(Optional.fromNullableProp<PathItem>()(info[1]))
+    .composeLens(Lens.fromProp<Operation>()("responses"))
+    .modify(responsesMap)(o);
 
-const _includeCodes = (
-  p: PathItem,
-  method: Meth,
-  r: (keyof Responses)[]
-): PathItem => ({
-  ...p,
-  ...__includeCodes(method, p[method], r)
-});
 const includeCodesInternal = (
   o: OpenAPIObject,
   info: [string, Meth],
   r: (keyof Responses)[]
-): OpenAPIObject => ({
-  ...o,
-  ...(o.paths
-    ? {
-        paths: {
-          ...o.paths,
-          ...(o.paths[info[0]]
-            ? { [info[0]]: _includeCodes(o.paths[info[0]], info[1], r) }
-            : {})
-        }
-      }
-    : {})
-});
+) =>
+  codesInternal(o, info, z =>
+    r.map(i => ({ [i]: z[i] })).reduce((a, b) => ({ ...a, ...b }), {})
+  );
 
 export const includeCodes = (
   info: [string, Meth] | string,
@@ -58,7 +50,6 @@ export const includeCodes = (
   typeof info === "string"
     ? metha.reduce((a, b) => includeCodesInternal(a, [info, b], r), o)
     : includeCodesInternal(o, info, r);
-// removeCodes
 
 const removeCode = (r: Responses, c: keyof Responses) => {
   const out = { ...r };
@@ -66,46 +57,11 @@ const removeCode = (r: Responses, c: keyof Responses) => {
   return out;
 };
 
-const __removeCodes = (
-  n: Meth,
-  o: Operation | undefined,
-  r: (keyof Responses)[]
-): Record<Meth, Operation> | {} =>
-  o
-    ? {
-        [n]: {
-          ...o,
-          responses: r.reduce(removeCode, o.responses)
-        }
-      }
-    : {};
-
-const _removeCodes = (
-  p: PathItem,
-  method: Meth,
-  r: (keyof Responses)[]
-): PathItem => ({
-  ...p,
-  ...__removeCodes(method, p[method], r)
-});
-
 const removeCodesInternal = (
   o: OpenAPIObject,
   info: [string, Meth],
   r: (keyof Responses)[]
-): OpenAPIObject => ({
-  ...o,
-  ...(o.paths
-    ? {
-        paths: {
-          ...o.paths,
-          ...(o.paths[info[0]]
-            ? { [info[0]]: _removeCodes(o.paths[info[0]], info[1], r) }
-            : {})
-        }
-      }
-    : {})
-});
+) => codesInternal(o, info, z => r.reduce(removeCode, z));
 
 export const removeCodes = (
   info: [string, Meth] | string,
