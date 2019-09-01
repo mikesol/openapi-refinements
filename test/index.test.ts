@@ -57,5 +57,4 @@ test("everything is composeable", () => {
   expect(refinedResponsesGet["200"]).toEqual(responsesGet["200"]);
   expect(Object.keys(refinedResponsesPost)).toEqual(["default"]);
   expect(refinedResponsesPost.default).toEqual(responsesPost.default);
-
 });
