@@ -6,6 +6,7 @@ import {
 } from "loas3/dist/generated/full";
 
 type Meth = "get" | "post" | "put" | "delete";
+const metha: Meth[] = ["get", "post", "put", "delete"];
 
 // include codes
 const __includeCodes = (
@@ -81,7 +82,7 @@ const _removeCodes = (
   ...__removeCodes(method, p[method], r)
 });
 
-export const removeCodes = (
+const removeCodesInternal = (
   o: OpenAPIObject,
   info: [string, Meth],
   r: (keyof Responses)[]
@@ -98,3 +99,12 @@ export const removeCodes = (
       }
     : {})
 });
+
+export const removeCodes = (
+  o: OpenAPIObject,
+  info: [string, Meth] | string,
+  r: (keyof Responses)[]
+): OpenAPIObject =>
+  typeof info === "string" ?
+  metha.reduce((a, b) => removeCodesInternal(a, [info, b], r), o)
+ : removeCodesInternal(o, info, r);
