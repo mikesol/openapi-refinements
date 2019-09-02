@@ -2,11 +2,14 @@ import {
   OpenAPIObject,
   Operation,
   PathItem,
-  Responses
+  Responses,
+  isResponses,
+  isOperation
 } from "loas3/dist/generated/full";
 
+import { some, none } from "fp-ts/lib/Option";
 import { array } from "fp-ts/lib/Array";
-import { Lens, Iso, fromTraversable, Optional } from "monocle-ts";
+import { Lens, Iso, fromTraversable, Optional, Prism } from "monocle-ts";
 const objectToArray = <T>() =>
   new Iso<Record<string, T>, [string, T][]>(
     s => Object.entries(s),
@@ -21,51 +24,41 @@ const metha: Meth[] = ["get", "post", "put", "delete"];
 
 const codesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth],
+  [path, meths]: [RegExp, Meth[]],
   responsesMap: (z: Responses) => Responses
 ) =>
   Lens.fromProp<OpenAPIObject>()("paths")
     .composeIso(objectToArray())
     .composeTraversal(
-      fromTraversable(array)<[string, PathItem]>().filter(i => info[0].test(i[0]))
+      fromTraversable(array)<[string, PathItem]>().filter(i => path.test(i[0]))
     )
     .composeLens(valueLens())
-    .composeOptional(Optional.fromNullableProp<PathItem>()(info[1]))
+    .composeIso(objectToArray<any>())
+    .composeTraversal(
+      fromTraversable(array)<[string, any]>().filter(
+        i => meths.map(z => `${z}`).indexOf(i[0]) !== -1
+      )
+    )
+    .composeLens(valueLens())
+    .composePrism(
+      new Prism<any, Operation>(s => (isOperation(s) ? some(s) : none), a => a)
+    )
     .composeLens(Lens.fromProp<Operation>()("responses"))
     .modify(responsesMap)(o);
 
 const argumentCoaxer = (
-  o: OpenAPIObject,
-  info: [string | RegExp, Meth] | string | RegExp,
-  r: (keyof Responses)[],
-  next: (
-    o: OpenAPIObject,
-    info: [RegExp, Meth],
-    r: (keyof Responses)[]
-  ) => OpenAPIObject
-): OpenAPIObject =>
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp
+): [RegExp, Meth[]] =>
   typeof info === "string" || info instanceof RegExp
-    ? metha.reduce(
-        (a, b) =>
-          next(
-            a,
-            [info instanceof RegExp ? info : new RegExp(`^${info}$`), b],
-            r
-          ),
-        o
-      )
-    : next(
-        o,
-        [
-          info[0] instanceof RegExp ? info[0] : new RegExp(`^${info[0]}$`),
-          info[1]
-        ],
-        r
-      );
+    ? [info instanceof RegExp ? info : new RegExp(`^${info}$`), metha]
+    : [
+        info[0] instanceof RegExp ? info[0] : new RegExp(`^${info[0]}$`),
+        info[1] instanceof Array ? info[1] : [info[1]]
+      ];
 
 const includeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth],
+  info: [RegExp, Meth[]],
   r: (keyof Responses)[]
 ) =>
   codesInternal(o, info, z =>
@@ -76,7 +69,7 @@ export const includeCodes = (
   info: [string | RegExp, Meth] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  argumentCoaxer(o, info, r, includeCodesInternal);
+  includeCodesInternal(o, argumentCoaxer(info), r);
 
 const removeCode = (r: Responses, c: keyof Responses) => {
   const out = { ...r };
@@ -86,7 +79,7 @@ const removeCode = (r: Responses, c: keyof Responses) => {
 
 const removeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth],
+  info: [RegExp, Meth[]],
   r: (keyof Responses)[]
 ) => codesInternal(o, info, z => r.reduce(removeCode, z));
 
@@ -94,4 +87,4 @@ export const removeCodes = (
   info: [string | RegExp, Meth] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  argumentCoaxer(o, info, r, removeCodesInternal);
+  removeCodesInternal(o, argumentCoaxer(info), r);
