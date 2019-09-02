@@ -71,6 +71,23 @@ test("includeCodes includes 200", () => {
   expect(refinedResponses["200"]).toEqual(responses["200"]);
 });
 
+test("includeCodes works on regex", () => {
+  const refined = includeCodes(new RegExp("[a-zA-Z0-9/{}]*"), ["default"])(petstore);
+  const petsResponses =
+    (refined.paths["/pets"] &&
+      refined.paths["/pets"].get &&
+      refined.paths["/pets"].get.responses) ||
+    {};
+  expect(Object.keys(petsResponses)).toEqual(["default"]);
+  const petsIdResponses =
+  (refined.paths["/pets/{petId}"] &&
+    refined.paths["/pets/{petId}"].get &&
+    refined.paths["/pets/{petId}"].get.responses) ||
+  {};
+expect(Object.keys(petsIdResponses)).toEqual(["default"]);
+});
+
+
 test("includeCodes includes all codes", () => {
   const refined = includeCodes(["/pets", "get"], ["200", "default"])(petstore);
   const responses =

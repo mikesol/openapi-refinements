@@ -21,22 +21,51 @@ const metha: Meth[] = ["get", "post", "put", "delete"];
 
 const codesInternal = (
   o: OpenAPIObject,
-  info: [string, Meth],
+  info: [RegExp, Meth],
   responsesMap: (z: Responses) => Responses
 ) =>
   Lens.fromProp<OpenAPIObject>()("paths")
     .composeIso(objectToArray())
     .composeTraversal(
-      fromTraversable(array)<[string, PathItem]>().filter(i => i[0] === info[0])
+      fromTraversable(array)<[string, PathItem]>().filter(i => info[0].test(i[0]))
     )
     .composeLens(valueLens())
     .composeOptional(Optional.fromNullableProp<PathItem>()(info[1]))
     .composeLens(Lens.fromProp<Operation>()("responses"))
     .modify(responsesMap)(o);
 
+const argumentCoaxer = (
+  o: OpenAPIObject,
+  info: [string | RegExp, Meth] | string | RegExp,
+  r: (keyof Responses)[],
+  next: (
+    o: OpenAPIObject,
+    info: [RegExp, Meth],
+    r: (keyof Responses)[]
+  ) => OpenAPIObject
+): OpenAPIObject =>
+  typeof info === "string" || info instanceof RegExp
+    ? metha.reduce(
+        (a, b) =>
+          next(
+            a,
+            [info instanceof RegExp ? info : new RegExp(`^${info}$`), b],
+            r
+          ),
+        o
+      )
+    : next(
+        o,
+        [
+          info[0] instanceof RegExp ? info[0] : new RegExp(`^${info[0]}$`),
+          info[1]
+        ],
+        r
+      );
+
 const includeCodesInternal = (
   o: OpenAPIObject,
-  info: [string, Meth],
+  info: [RegExp, Meth],
   r: (keyof Responses)[]
 ) =>
   codesInternal(o, info, z =>
@@ -44,12 +73,10 @@ const includeCodesInternal = (
   );
 
 export const includeCodes = (
-  info: [string, Meth] | string,
+  info: [string | RegExp, Meth] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  typeof info === "string"
-    ? metha.reduce((a, b) => includeCodesInternal(a, [info, b], r), o)
-    : includeCodesInternal(o, info, r);
+  argumentCoaxer(o, info, r, includeCodesInternal);
 
 const removeCode = (r: Responses, c: keyof Responses) => {
   const out = { ...r };
@@ -59,14 +86,12 @@ const removeCode = (r: Responses, c: keyof Responses) => {
 
 const removeCodesInternal = (
   o: OpenAPIObject,
-  info: [string, Meth],
+  info: [RegExp, Meth],
   r: (keyof Responses)[]
 ) => codesInternal(o, info, z => r.reduce(removeCode, z));
 
 export const removeCodes = (
-  info: [string, Meth] | string,
+  info: [string | RegExp, Meth] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  typeof info === "string"
-    ? metha.reduce((a, b) => removeCodesInternal(a, [info, b], r), o)
-    : removeCodesInternal(o, info, r);
+  argumentCoaxer(o, info, r, removeCodesInternal);
