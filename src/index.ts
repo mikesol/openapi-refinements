@@ -3,7 +3,6 @@ import {
   Operation,
   PathItem,
   Responses,
-  isResponses,
   isOperation
 } from "loas3/dist/generated/full";
 
