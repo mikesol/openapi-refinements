@@ -8,7 +8,7 @@ import {
 
 import { some, none } from "fp-ts/lib/Option";
 import { array } from "fp-ts/lib/Array";
-import { Lens, Iso, fromTraversable, Optional, Prism } from "monocle-ts";
+import { Lens, Iso, fromTraversable, Prism } from "monocle-ts";
 const objectToArray = <T>() =>
   new Iso<Record<string, T>, [string, T][]>(
     s => Object.entries(s),
