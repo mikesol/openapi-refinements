@@ -1,5 +1,6 @@
-import { removeCodes, includeCodes } from "../src";
+import { removeCodes, includeCodes, changeMinItems } from "../src";
 import petstore from "./petstore";
+import { Response } from "loas3/dist/generated/full";
 
 test("removeCodes removes 200 and 201 everywhere", () => {
   const refined = removeCodes("/pets", ["200", "201"])(petstore);
@@ -128,4 +129,13 @@ test("everything is composeable", () => {
   expect(refinedResponsesGet["200"]).toEqual(responsesGet["200"]);
   expect(Object.keys(refinedResponsesPost)).toEqual(["default"]);
   expect(refinedResponsesPost.default).toEqual(responsesPost.default);
+});
+
+test("changeMinItems changes min items", () => {
+  const refined = changeMinItems(5)(petstore, "/pets", ["200"], []);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.minItems
+  ).toBe(5);
 });
