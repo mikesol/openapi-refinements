@@ -138,8 +138,11 @@ const petstore: OpenAPIObject = {
           name: {
             type: "string"
           },
-          tag: {
-            type: "string"
+          tags: {
+            type: "array",
+            items: {
+              type: "string"
+            }
           }
         }
       },

@@ -1,6 +1,5 @@
-import { removeCodes, includeCodes, changeMinItems } from "../src";
+import { removeCodes, includeCodes, changeMinItems, Arr, changeMaxItems } from "../src";
 import petstore from "./petstore";
-import { Response } from "loas3/dist/generated/full";
 
 test("removeCodes removes 200 and 201 everywhere", () => {
   const refined = removeCodes("/pets", ["200", "201"])(petstore);
@@ -138,4 +137,18 @@ test("changeMinItems changes min items", () => {
       "application/json"
     ].schema.minItems
   ).toBe(5);
+});
+
+test("changeMaxItems changes max items on nested object", () => {
+  const refined = changeMaxItems(63)(petstore, "/pets", ["200"], [Arr, "tags"]);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items.properties.tags.maxItems
+  ).toBe(63);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.maxItems
+  ).toBe(undefined);
 });

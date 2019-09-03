@@ -122,12 +122,12 @@ const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
 
 const minItems = (i: number) => (s: Schema): Schema => ({
   ...s,
-  minItems: i
+  minItems: typeof s.minItems === "number" && s.minItems > i ? s.minItems : i
 });
 
 const maxItems = (i: number) => (s: Schema): Schema => ({
   ...s,
-  maxItems: i
+  minItems: typeof s.maxItems === "number" && s.maxItems < i ? s.maxItems : i
 });
 
 const drillDownSchemaProperty = (o: OpenAPIObject, i: string) =>
