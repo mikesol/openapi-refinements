@@ -5,7 +5,8 @@ import {
   Arr,
   changeMaxItems,
   changeRequiredStatus,
-  changeToConst
+  changeToConst,
+  changeListToTuple
 } from "../src";
 import petstore from "./petstore";
 
@@ -211,5 +212,13 @@ test("changeToConst accepts const with full array", () => {
       "application/json"
     ].schema.items[1].properties.tags.items[0].enum[0]
   ).toBe("foo");
+});
 
+test("changeListToTuple length is correct", () => {
+  const refined = changeListToTuple(5)(petstore, "/pets", ["200"], []);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items.length
+  ).toEqual(5);
 });

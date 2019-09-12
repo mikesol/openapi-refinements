@@ -150,6 +150,20 @@ const requiredStatus = (prop: string) => (s: Schema): Schema => ({
     : {})
 });
 
+const itemsToList = (
+  i: number,
+  items: Reference | Schema
+): (Reference | Schema)[] => new Array(i).fill(0).map(_ => items);
+const listToTuple = (i: number) => (s: Schema): Schema => ({
+  ...s,
+  ...(s.items &&
+  !(s.items instanceof Array) &&
+  (!s.minItems || i >= s.minItems) &&
+  (!s.maxItems || i <= s.maxItems)
+    ? { items: itemsToList(i, s.items) }
+    : {})
+});
+
 const valAsConst = (val: JSONValue): Schema =>
   val === null
     ? { type: "null" }
@@ -346,7 +360,8 @@ const codesInternal = (
   info: [RegExp, Meth[]],
   responsesMap: (z: Responses) => Responses
 ) => lensToResponses(info).modify(responsesMap)(o);
-
+export const changeListToTuple = (i: number) =>
+  changeSingleSchema(addOpenApi(listToTuple(i)));
 const argumentCoaxer = (
   info: [string | RegExp, Meth | Meth[]] | string | RegExp
 ): [RegExp, Meth[]] =>
