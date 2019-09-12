@@ -7,7 +7,8 @@ import {
   changeRequiredStatus,
   changeToConst,
   changeListToTuple,
-  oneOfKeep
+  oneOfKeep,
+  oneOfReject
 } from "../src";
 import petstore from "./petstore";
 
@@ -224,7 +225,7 @@ test("changeListToTuple length is correct", () => {
   ).toEqual(5);
 });
 
-test("whittling oneOf is correct", () => {
+test("whittling oneOf with keep is correct", () => {
   const refined = oneOfKeep([0, 3, 4])(petstore, "/pets/{petId}", ["default"], []);
   expect(
     (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
@@ -236,4 +237,19 @@ test("whittling oneOf is correct", () => {
       "application/json"
     ].schema.oneOf[2].$ref
   ).toEqual("#/components/schemas/Error5");
+});
+
+
+test("whittling oneOf with reject is correct", () => {
+  const refined = oneOfReject([0, 3, 4])(petstore, "/pets/{petId}", ["default"], []);
+  expect(
+    (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
+      "application/json"
+    ].schema.oneOf.length
+  ).toEqual(2);
+  expect(
+    (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
+      "application/json"
+    ].schema.oneOf[1].$ref
+  ).toEqual("#/components/schemas/Error3");
 });
