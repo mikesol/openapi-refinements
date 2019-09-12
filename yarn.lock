@@ -1454,6 +1454,11 @@ io-ts@^1.10.2:
   dependencies:
     fp-ts "^1.0.0"
 
+io-ts@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/io-ts/-/io-ts-2.0.1.tgz#1261c12f915c2f48d16393a36966636b48a45aa1"
+  integrity sha512-RezD+WcCfW4VkMkEcQWL/Nmy/nqsWTvTYg7oUmTGzglvSSV2P9h2z1PVeREPFf0GWNzruYleAt1XCMQZSg1xxQ==
+
 is-accessor-descriptor@^0.1.6:
   version "0.1.6"
   resolved "https://registry.yarnpkg.com/is-accessor-descriptor/-/is-accessor-descriptor-0.1.6.tgz#a9e12cb3ae8d876727eeef3843f8a0897b5c98d6"
@@ -2082,6 +2087,13 @@ json-parse-better-errors@^1.0.1:
   resolved "https://registry.yarnpkg.com/json-parse-better-errors/-/json-parse-better-errors-1.0.2.tgz#bb867cfb3450e69107c131d1c514bab3dc8bcaa9"
   integrity sha512-mrqyZKfX5EhL7hvqcV6WG1yYjnjeuYDzDhhcAAUrq8Po85NBQBJP+ZDUT75qZQ98IkUoBqdkExkukOU7Ts2wrw==
 
+json-schema-strictly-typed@^0.0.14:
+  version "0.0.14"
+  resolved "https://registry.yarnpkg.com/json-schema-strictly-typed/-/json-schema-strictly-typed-0.0.14.tgz#c965f7caf2b8a99d544d876704a533da4fb62184"
+  integrity sha512-tzOWiUkw/HxrwJJ2i3iOfRRwxVs27bNoZf4x1LJZCtIw6gptMnPAuFD7QPGXPQzyo1lWasrj2Mmlpldr6vK8mw==
+  dependencies:
+    io-ts "^2.0.1"
+
 json-schema-traverse@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz#69f6a87d9513ab8bb8fe63bdb0979c448e684660"
@@ -2103,6 +2115,11 @@ json5@2.x, json5@^2.1.0:
   integrity sha512-8Mh9h6xViijj36g7Dxi+Y4S6hNGV96vcJZr/SrlHh1LR/pEn/8j/+qIBbs44YKl69Lrfctp4QD+AdWLTMqEZAQ==
   dependencies:
     minimist "^1.2.0"
+
+jsonschema@^1.2.4:
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/jsonschema/-/jsonschema-1.2.4.tgz#a46bac5d3506a254465bc548876e267c6d0d6464"
+  integrity sha512-lz1nOH69GbsVHeVgEdvyavc/33oymY1AZwtePMiMj4HZPMbP5OIKK3zT9INMWjwua/V4Z4yq7wSlBbSG+g4AEw==
 
 jsprim@^1.2.2:
   version "1.4.1"
@@ -2171,10 +2188,10 @@ load-json-file@^4.0.0:
     pify "^3.0.0"
     strip-bom "^3.0.0"
 
-loas3@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/loas3/-/loas3-0.1.1.tgz#1c62a908779ab88cbaf9dde4787ff6a4ca147dee"
-  integrity sha512-Gs5gr2WAFvIPxahlWh/8y9dRZUe7v+OQ2NIJvVM58ZTCSULcBZtkgFThHidtEm/q4kDZOLfP5jo9v6r4nbzKpg==
+loas3@^0.1.4:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/loas3/-/loas3-0.1.4.tgz#b90ea7bea307d8b51a519abd3b43bb4d8ca7033b"
+  integrity sha512-J/60WWhWSzz0RmsUKAPcT4CDuglj5rc9Vr20nkaCZPUkiVLHUlBFaMGY5yK7aTK//BopBpdfnUXNfzjwYUKoww==
   dependencies:
     ajv "^6.10.0"
     ajv-errors "^1.0.1"

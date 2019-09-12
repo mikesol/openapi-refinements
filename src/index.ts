@@ -14,6 +14,9 @@ import {
   MediaType
 } from "loas3/dist/generated/full";
 
+import jsonschema from "jsonschema";
+
+import { JSONValue } from "json-schema-strictly-typed";
 import { some, none, Option, fold } from "fp-ts/lib/Option";
 import { array } from "fp-ts/lib/Array";
 import {
@@ -122,13 +125,62 @@ const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
 
 const minItems = (i: number) => (s: Schema): Schema => ({
   ...s,
-  minItems: typeof s.minItems === "number" && s.minItems > i ? s.minItems : i
+  ...(s.type === "array" || s.items
+    ? {
+        minItems:
+          typeof s.minItems === "number" && s.minItems > i ? s.minItems : i
+      }
+    : {})
 });
 
 const maxItems = (i: number) => (s: Schema): Schema => ({
   ...s,
-  minItems: typeof s.maxItems === "number" && s.maxItems < i ? s.maxItems : i
+  ...(s.type === "array" || s.items
+    ? {
+        maxItems:
+          typeof s.maxItems === "number" && s.maxItems < i ? s.maxItems : i
+      }
+    : {})
 });
+
+const requiredStatus = (prop: string) => (s: Schema): Schema => ({
+  ...s,
+  ...(s.properties && s.properties[prop]
+    ? { required: s.required ? [...new Set(s.required.concat(prop))] : [prop] }
+    : {})
+});
+
+const valAsConst = (val: JSONValue): Schema =>
+  val === null
+    ? { type: "null" }
+    : typeof val === "number"
+    ? { type: "number", enum: [val] }
+    : typeof val === "boolean"
+    ? { type: "boolean", enum: [val] }
+    : typeof val === "string"
+    ? { type: "string", enum: [val] }
+    : val instanceof Array
+    ? { type: "array", items: val.map(i => valAsConst(i)) }
+    : typeof val === "object"
+    ? {
+        type: "object",
+        properties: Object.entries(val).reduce(
+          (a, b) => ({ ...a, [b[0]]: valAsConst(b[1]) }),
+          {}
+        )
+      }
+    : { type: "string" };
+
+const toConst = (val: JSONValue) => (o: OpenAPIObject) => (s: Schema): Schema =>
+  jsonschema.validate(val, {
+    ...s,
+    definitions:
+      o.components && o.components.schemas ? o.components.schemas : {}
+  }).valid
+    ? valAsConst(val)
+    : s;
+
+const addOpenApi = (a: (s: Schema) => Schema) => (_: OpenAPIObject) => a;
 
 const drillDownSchemaProperty = (o: OpenAPIObject, i: string) =>
   Optional.fromNullableProp<Schema>()("properties")
@@ -147,14 +199,39 @@ const drillDownSchemaItem = (o: OpenAPIObject) =>
   Optional.fromNullableProp<Schema>()("items").composePrism(
     new Prism(
       s =>
-        isReference(s) ? getSchemaFromRef(o, s.$ref.split("/")[3]) : some(s),
+        isReference(s)
+          ? getSchemaFromRef(o, s.$ref.split("/")[3])
+          : s instanceof Array
+          ? none
+          : some(s),
+      a => a
+    )
+  );
+
+const itemsInternal = (s: Schema | Reference, o: OpenAPIObject) =>
+  isReference(s) ? getSchemaFromRef(o, s.$ref.split("/")[3]) : some(s);
+
+const drillDownSchemaItems = (o: OpenAPIObject, i: number) =>
+  Optional.fromNullableProp<Schema>()("items").composePrism(
+    new Prism(
+      s =>
+        s instanceof Array && s.length < i - 1 && i >= 0
+          ? itemsInternal(s[i], o)
+          : none,
       a => a
     )
   );
 
 export const Arr: unique symbol = Symbol();
-const drillDownSchemaOneLevel = (o: OpenAPIObject, i: string | typeof Arr) =>
-  i === Arr ? drillDownSchemaItem(o) : drillDownSchemaProperty(o, i);
+const drillDownSchemaOneLevel = (
+  o: OpenAPIObject,
+  i: string | typeof Arr | number
+) =>
+  i === Arr
+    ? drillDownSchemaItem(o)
+    : typeof i === "number"
+    ? drillDownSchemaItems(o, i)
+    : drillDownSchemaProperty(o, i);
 const downToSchema = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
@@ -185,7 +262,9 @@ const downToSchema = (
     )
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 
-const changeSingleSchema = (s2s: (s: Schema) => Schema) => (
+const changeSingleSchema = (
+  s2s: (o: OpenAPIObject) => (s: Schema) => Schema
+) => (
   o: OpenAPIObject,
   info: [string | RegExp, Meth | Meth[]] | string | RegExp,
   responses: (keyof Responses)[],
@@ -202,11 +281,19 @@ const changeSingleSchema = (s2s: (s: Schema) => Schema) => (
     .modify(
       path
         .reverse()
-        .reduce((cur, mxt) => drillDownSchemaOneLevel(o, mxt).modify(cur), s2s)
+        .reduce(
+          (cur, mxt) => drillDownSchemaOneLevel(o, mxt).modify(cur),
+          s2s(o)
+        )
     )(o);
 
-export const changeMinItems = (i: number) => changeSingleSchema(minItems(i));
-export const changeMaxItems = (i: number) => changeSingleSchema(maxItems(i));
+export const changeMinItems = (i: number) =>
+  changeSingleSchema(addOpenApi(minItems(i)));
+export const changeMaxItems = (i: number) =>
+  changeSingleSchema(addOpenApi(maxItems(i)));
+export const changeRequiredStatus = (s: string) =>
+  changeSingleSchema(addOpenApi(requiredStatus(s)));
+export const changeToConst = (v: JSONValue) => changeSingleSchema(toConst(v));
 const codesInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],

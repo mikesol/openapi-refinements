@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "fp-ts": "^2.0.5",
-    "loas3": "^0.1.1",
+    "json-schema-strictly-typed": "^0.0.14",
+    "jsonschema": "^1.2.4",
+    "loas3": "^0.1.4",
     "monocle-ts": "^2.0.0"
   },
   "scripts": {

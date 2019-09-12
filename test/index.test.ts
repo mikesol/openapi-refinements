@@ -1,4 +1,11 @@
-import { removeCodes, includeCodes, changeMinItems, Arr, changeMaxItems } from "../src";
+import {
+  removeCodes,
+  includeCodes,
+  changeMinItems,
+  Arr,
+  changeMaxItems,
+  changeRequiredStatus
+} from "../src";
 import petstore from "./petstore";
 
 test("removeCodes removes 200 and 201 everywhere", () => {
@@ -151,4 +158,20 @@ test("changeMaxItems changes max items on nested object", () => {
       "application/json"
     ].schema.maxItems
   ).toBe(undefined);
+});
+
+test("changeRequiredStatus changes required status on nested object", () => {
+  const refined = changeRequiredStatus("tags")(
+    petstore,
+    "/pets",
+    ["200"],
+    [Arr]
+  );
+  expect(
+    new Set(
+      (<any>refined).paths["/pets"].get.responses["200"].content[
+        "application/json"
+      ].schema.items.required
+    )
+  ).toEqual(new Set(["id", "name", "tags"]));
 });
