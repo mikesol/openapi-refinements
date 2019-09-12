@@ -6,7 +6,8 @@ import {
   changeMaxItems,
   changeRequiredStatus,
   changeToConst,
-  changeListToTuple
+  changeListToTuple,
+  oneOfKeep
 } from "../src";
 import petstore from "./petstore";
 
@@ -221,4 +222,18 @@ test("changeListToTuple length is correct", () => {
       "application/json"
     ].schema.items.length
   ).toEqual(5);
+});
+
+test("whittling oneOf is correct", () => {
+  const refined = oneOfKeep([0, 3, 4])(petstore, "/pets/{petId}", ["default"], []);
+  expect(
+    (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
+      "application/json"
+    ].schema.oneOf.length
+  ).toEqual(3);
+  expect(
+    (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
+      "application/json"
+    ].schema.oneOf[2].$ref
+  ).toEqual("#/components/schemas/Error5");
 });

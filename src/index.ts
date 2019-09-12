@@ -150,6 +150,26 @@ const requiredStatus = (prop: string) => (s: Schema): Schema => ({
     : {})
 });
 
+const filterSchemaList = (
+  i: number[],
+  key: "anyOf" | "oneOf",
+  l: (Reference | Schema)[] | undefined,
+  keep: boolean
+) =>
+  l
+    ? {
+        [key]: l.filter((a, b) =>
+          keep ? i.indexOf(b) >= 0 : i.indexOf(b) === -1
+        )
+      }
+    : {};
+const changeAnyOne = (i: number[], key: "anyOf" | "oneOf", keep: boolean) => (
+  s: Schema
+): Schema => ({
+  ...s,
+  ...filterSchemaList(i, key, s[key], keep)
+});
+
 const itemsToList = (
   i: number,
   items: Reference | Schema
@@ -362,6 +382,15 @@ const codesInternal = (
 ) => lensToResponses(info).modify(responsesMap)(o);
 export const changeListToTuple = (i: number) =>
   changeSingleSchema(addOpenApi(listToTuple(i)));
+export const anyOfKeep = (i: number[]) =>
+  changeSingleSchema(addOpenApi(changeAnyOne(i, "anyOf", true)));
+export const anyOfReject = (i: number[]) =>
+  changeSingleSchema(addOpenApi(changeAnyOne(i, "anyOf", false)));
+export const oneOfKeep = (i: number[]) =>
+  changeSingleSchema(addOpenApi(changeAnyOne(i, "oneOf", true)));
+export const oneOfReject = (i: number[]) =>
+  changeSingleSchema(addOpenApi(changeAnyOne(i, "oneOf", false)));
+
 const argumentCoaxer = (
   info: [string | RegExp, Meth | Meth[]] | string | RegExp
 ): [RegExp, Meth[]] =>

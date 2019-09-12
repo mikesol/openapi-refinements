@@ -116,7 +116,13 @@ const petstore: OpenAPIObject = {
             content: {
               "application/json": {
                 schema: {
-                  $ref: "#/components/schemas/Error"
+                  oneOf: [
+                    { $ref: "#/components/schemas/Error" },
+                    { $ref: "#/components/schemas/Error2" },
+                    { $ref: "#/components/schemas/Error3" },
+                    { $ref: "#/components/schemas/Error4" },
+                    { $ref: "#/components/schemas/Error5" }
+                  ]
                 }
               }
             }
@@ -153,6 +159,58 @@ const petstore: OpenAPIObject = {
         }
       },
       Error: {
+        type: "object",
+        required: ["code", "message"],
+        properties: {
+          code: {
+            type: "integer",
+            format: "int32"
+          },
+          message: {
+            type: "string"
+          }
+        }
+      },
+      Error2: {
+        type: "object",
+        required: ["code", "message"],
+        properties: {
+          code: {
+            type: "integer",
+            format: "int32"
+          },
+          message: {
+            type: "string"
+          }
+        }
+      },
+      Error3: {
+        type: "object",
+        required: ["code", "message"],
+        properties: {
+          code: {
+            type: "integer",
+            format: "int32"
+          },
+          message: {
+            type: "string"
+          }
+        }
+      },
+      Error4: {
+        type: "object",
+        required: ["code", "message"],
+        properties: {
+          code: {
+            type: "integer",
+            format: "int32"
+          },
+          message: {
+            type: "string"
+          }
+        }
+      },
+      Error5: {
         type: "object",
         required: ["code", "message"],
         properties: {
