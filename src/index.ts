@@ -171,14 +171,61 @@ const valAsConst = (val: JSONValue): Schema =>
       }
     : { type: "string" };
 
-const toConst = (val: JSONValue) => (o: OpenAPIObject) => (s: Schema): Schema =>
+const toConstInternal = (
+  val: JSONValue,
+  definitions: Record<string, Reference | Schema>,
+  s: Schema
+): Schema =>
   jsonschema.validate(val, {
     ...s,
-    definitions:
-      o.components && o.components.schemas ? o.components.schemas : {}
+    definitions
   }).valid
     ? valAsConst(val)
     : s;
+
+const changeRef = (j: Reference): Reference => ({
+  $ref: `#/definitions/${j.$ref.split("/")[3]}`
+});
+const changeRefs = (j: Schema): Schema => ({
+  ...j,
+  ...(isReference(j.additionalProperties)
+    ? changeRef(j.additionalProperties)
+    : {}),
+  ...(isSchema(j.additionalProperties)
+    ? { additionalProperties: changeRefs(j.additionalProperties) }
+    : {}),
+  ...(isReference(j.items) ? { items: changeRef(j.items) } : {}),
+  ...(isSchema(j.items) ? { items: changeRefs(j.items) } : {}),
+  ...(j.items instanceof Array
+    ? { items: j.items.map(i => (isSchema(i) ? changeRefs(i) : changeRef(i))) }
+    : {}),
+  ...(j.properties
+    ? {
+        properties: Object.entries(j.properties).reduce(
+          (a, b) => ({
+            ...a,
+            [b[0]]: isSchema(b[1]) ? changeRefs(b[1]) : changeRef(b[1])
+          }),
+          {}
+        )
+      }
+    : {})
+});
+
+const toConst = (val: JSONValue) => (o: OpenAPIObject) => (s: Schema): Schema =>
+  toConstInternal(
+    val,
+    Object.entries(
+      o.components && o.components.schemas ? o.components.schemas : {}
+    ).reduce(
+      (a, b) => ({
+        ...a,
+        [b[0]]: isSchema(b[1]) ? changeRefs(b[1]) : changeRef(b[1])
+      }),
+      {}
+    ),
+    changeRefs(s)
+  );
 
 const addOpenApi = (a: (s: Schema) => Schema) => (_: OpenAPIObject) => a;
 

@@ -4,7 +4,8 @@ import {
   changeMinItems,
   Arr,
   changeMaxItems,
-  changeRequiredStatus
+  changeRequiredStatus,
+  changeToConst
 } from "../src";
 import petstore from "./petstore";
 
@@ -174,4 +175,41 @@ test("changeRequiredStatus changes required status on nested object", () => {
       ].schema.items.required
     )
   ).toEqual(new Set(["id", "name", "tags"]));
+});
+
+test("changeToConst accepts const with empty array", () => {
+  const refined = changeToConst([])(petstore, "/pets", ["200"], []);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items
+  ).toEqual([]);
+});
+
+test("changeToConst accepts const with full array", () => {
+  const refined = changeToConst([
+    { id: 0, name: "Fluffy" },
+    { id: 1, name: "Trix", tags: ["foo", "bar"] }
+  ])(petstore, "/pets", ["200"], []);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[0].properties.id.enum[0]
+  ).toBe(0);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[1].properties.id.enum[0]
+  ).toBe(1);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[1].properties.name.enum[0]
+  ).toBe("Trix");
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[1].properties.tags.items[0].enum[0]
+  ).toBe("foo");
+
 });
