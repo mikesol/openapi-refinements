@@ -34,6 +34,7 @@ import {
   Setter
 } from "monocle-ts";
 
+const APPLICATION_JSON = "application/json";
 const objectToArray = <T>() =>
   new Iso<Record<string, T>, [string, T][]>(
     s => Object.entries(s),
@@ -153,7 +154,7 @@ const discernParameter = (
 ): Option<Parameter> =>
   isNone(o) ? o : o.value.in === inn && o.value.name === name ? o : none;
 
-const topLevelParameterInternal = (
+const pathParameterInternal = (
   o: OpenAPIObject,
   path: RegExp,
   name: string,
@@ -168,7 +169,7 @@ const topLevelParameterInternal = (
     inn
   );
 
-const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]]) =>
+const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]], mediaTypes: string[]) =>
   lensToOperations(info)
     .composeOptional(Optional.fromNullableProp<Operation>()("requestBody"))
     .composePrism(
@@ -184,10 +185,13 @@ const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]]) =>
     )
     .composeOptional(Optional.fromNullableProp<RequestBody>()("content"))
     // TODO: this is a code dup from elsewhere...
-    .composeOptional(
-      Optional.fromNullableProp<Record<string, MediaType>>()("application/json")
+    .composeIso(objectToArray<MediaType>())
+    .composeTraversal(
+      fromTraversable(array)<[string, MediaType]>().filter(i => mediaTypes.indexOf(i[0]) >= 0)
     )
+    .composeLens(valueLens())
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
+
 const methodParameterInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
@@ -396,18 +400,27 @@ const drillDownSchemaProperty = (o: OpenAPIObject, i: string) =>
       )
     );
 
-const drillDownSchemaItem = (o: OpenAPIObject) =>
-  Optional.fromNullableProp<Schema>()("items").composePrism(
+const drillDownSchemaItemOrAdditionalProperties = (
+  i: "items" | "additionalProperties"
+) => (o: OpenAPIObject) =>
+  Optional.fromNullableProp<Schema>()(i).composePrism(
     new Prism(
       s =>
         isReference(s)
           ? getSchemaFromRef(o, s.$ref.split("/")[3])
           : s instanceof Array
           ? none
+          : typeof s === "boolean"
+          ? some({})
           : some(s),
       a => a
     )
   );
+
+const drillDownSchemaItem = drillDownSchemaItemOrAdditionalProperties("items");
+const drillDownSchemaAdditionalProperties = drillDownSchemaItemOrAdditionalProperties(
+  "additionalProperties"
+);
 
 const itemsInternal = (s: Schema | Reference, o: OpenAPIObject) =>
   isReference(s) ? getSchemaFromRef(o, s.$ref.split("/")[3]) : some(s);
@@ -424,19 +437,23 @@ const drillDownSchemaItems = (o: OpenAPIObject, i: number) =>
   );
 
 export const Arr: unique symbol = Symbol();
+export const Addl: unique symbol = Symbol();
 const drillDownSchemaOneLevel = (
   o: OpenAPIObject,
-  i: string | typeof Arr | number
+  i: string | typeof Arr | number | typeof Addl
 ) =>
   i === Arr
     ? drillDownSchemaItem(o)
+    : i === Addl
+    ? drillDownSchemaAdditionalProperties(o)
     : typeof i === "number"
     ? drillDownSchemaItems(o, i)
     : drillDownSchemaProperty(o, i);
 const responseBodyInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
-  responses: (keyof Responses)[]
+  responses: (keyof Responses)[],
+  mediaTypes: string[]
 ) =>
   lensToResponses(info)
     .composeIso(objectToArray<any>())
@@ -458,23 +475,26 @@ const responseBodyInternal = (
       )
     )
     .composeOptional(Optional.fromNullableProp<Response>()("content"))
-    .composeOptional(
-      Optional.fromNullableProp<Record<string, MediaType>>()("application/json")
+    .composeIso(objectToArray<MediaType>())
+    .composeTraversal(
+      fromTraversable(array)<[string, MediaType]>().filter(i => mediaTypes.indexOf(i[0]) >= 0)
     )
+    .composeLens(valueLens())
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 
 export const responseBody = (
   info: [string | RegExp, Meth | Meth[]] | string | RegExp,
-  responses: (keyof Responses)[]
+  responses: (keyof Responses)[],
+  mediaTypes: string[] = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  responseBodyInternal(o, argumentCoaxer(info), responses);
+  responseBodyInternal(o, argumentCoaxer(info), responses, mediaTypes);
 
-export const topLevelParameter = (
+export const pathParameter = (
   path: string | RegExp,
   name: string,
   inn: string
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  topLevelParameterInternal(
+  pathParameterInternal(
     o,
     path instanceof RegExp ? path : new RegExp(`^${path}$`),
     name,
@@ -489,17 +509,17 @@ export const methodParameter = (
   methodParameterInternal(o, argumentCoaxer(info), name, inn);
 
 export const requestBody = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  mediaTypes: string[] = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  requestBodyInternal(o, argumentCoaxer(info));
+  requestBodyInternal(o, argumentCoaxer(info), mediaTypes);
 
 const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
 ) => (
-  o: OpenAPIObject,
   traversal: (o: OpenAPIObject) => Traversal<OpenAPIObject, Reference | Schema>,
-  path: (string | typeof Arr)[]
-) =>
+  path: (string | typeof Arr | number | typeof Addl)[]
+) => (o: OpenAPIObject) =>
   traversal(o)
     .composePrism(
       new Prism(

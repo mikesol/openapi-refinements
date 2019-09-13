@@ -145,10 +145,8 @@ test("everything is composeable", () => {
 });
 
 test("changeMinItems changes min items", () => {
-  const refined = changeMinItems(5)(
-    petstore,
-    responseBody("/pets", ["200"]),
-    []
+  const refined = changeMinItems(5)(responseBody("/pets", ["200"]), [])(
+    petstore
   );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -158,10 +156,10 @@ test("changeMinItems changes min items", () => {
 });
 
 test("changeMaxItems changes max items on nested object", () => {
-  const refined = changeMaxItems(63)(petstore, responseBody("/pets", ["200"]), [
+  const refined = changeMaxItems(63)(responseBody("/pets", ["200"]), [
     Arr,
     "tags"
-  ]);
+  ])(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -175,11 +173,11 @@ test("changeMaxItems changes max items on nested object", () => {
 });
 
 test("changing an enum is possible", () => {
-  const refined = changeEnum(["cute"], true)(
-    petstore,
-    responseBody("/pets", ["200"]),
-    [Arr, "tags", Arr]
-  );
+  const refined = changeEnum(["cute"], true)(responseBody("/pets", ["200"]), [
+    Arr,
+    "tags",
+    Arr
+  ])(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -188,11 +186,9 @@ test("changing an enum is possible", () => {
 });
 
 test("changeRequiredStatus changes required status on nested object", () => {
-  const refined = changeRequiredStatus("tags")(
-    petstore,
-    responseBody("/pets", ["200"]),
-    [Arr]
-  );
+  const refined = changeRequiredStatus("tags")(responseBody("/pets", ["200"]), [
+    Arr
+  ])(petstore);
   expect(
     new Set(
       (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -203,10 +199,8 @@ test("changeRequiredStatus changes required status on nested object", () => {
 });
 
 test("changeToConst accepts const with empty array", () => {
-  const refined = changeToConst([])(
-    petstore,
-    responseBody("/pets", ["200"]),
-    []
+  const refined = changeToConst([])(responseBody("/pets", ["200"]), [])(
+    petstore
   );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -219,7 +213,7 @@ test("changeToConst accepts const with full array", () => {
   const refined = changeToConst([
     { id: 0, name: "Fluffy" },
     { id: 1, name: "Trix", tags: ["cute", "sad"] }
-  ])(petstore, responseBody("/pets", ["200"]), []);
+  ])(responseBody("/pets", ["200"]), [])(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -243,10 +237,8 @@ test("changeToConst accepts const with full array", () => {
 });
 
 test("changeListToTuple length is correct", () => {
-  const refined = changeListToTuple(5)(
-    petstore,
-    responseBody("/pets", ["200"]),
-    []
+  const refined = changeListToTuple(5)(responseBody("/pets", ["200"]), [])(
+    petstore
   );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -257,10 +249,9 @@ test("changeListToTuple length is correct", () => {
 
 test("whittling oneOf with keep is correct", () => {
   const refined = oneOfKeep([0, 3, 4])(
-    petstore,
     responseBody("/pets/{petId}", ["default"]),
     []
-  );
+  )(petstore);
   expect(
     (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
       "application/json"
@@ -275,10 +266,9 @@ test("whittling oneOf with keep is correct", () => {
 
 test("whittling oneOf with reject is correct", () => {
   const refined = oneOfReject([0, 3, 4])(
-    petstore,
     responseBody("/pets/{petId}", ["default"]),
     []
-  );
+  )(petstore);
   expect(
     (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
       "application/json"
@@ -293,10 +283,9 @@ test("whittling oneOf with reject is correct", () => {
 
 test("changing a parameter is possible", () => {
   const refined = changeToConst(42)(
-    petstore,
     methodParameter("/pets", "limit", "query"),
     []
-  );
+  )(petstore);
   expect((<any>refined).paths["/pets"].get.parameters[0].schema.enum[0]).toBe(
     42
   );
