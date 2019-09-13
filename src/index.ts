@@ -30,8 +30,7 @@ import {
   Prism,
   Traversal,
   Optional,
-  Getter,
-  Setter
+  Getter
 } from "monocle-ts";
 
 const APPLICATION_JSON = "application/json";
@@ -172,7 +171,7 @@ const pathParameterInternal = (
 const requestBodyInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
-  mediaTypes: string[]
+  mediaTypes: string[] | boolean
 ) =>
   lensToOperations(info)
     .composeOptional(Optional.fromNullableProp<Operation>()("requestBody"))
@@ -191,8 +190,10 @@ const requestBodyInternal = (
     // TODO: this is a code dup from elsewhere...
     .composeIso(objectToArray<MediaType>())
     .composeTraversal(
-      fromTraversable(array)<[string, MediaType]>().filter(
-        i => mediaTypes.indexOf(i[0]) >= 0
+      fromTraversable(array)<[string, MediaType]>().filter(i =>
+        typeof mediaTypes === "boolean"
+          ? mediaTypes
+          : mediaTypes.indexOf(i[0]) >= 0
       )
     )
     .composeLens(valueLens())
@@ -459,7 +460,7 @@ const responseBodyInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
   responses: (keyof Responses)[],
-  mediaTypes: string[]
+  mediaTypes: string[] | boolean
 ) =>
   lensToResponses(info)
     .composeIso(objectToArray<any>())
@@ -483,8 +484,10 @@ const responseBodyInternal = (
     .composeOptional(Optional.fromNullableProp<Response>()("content"))
     .composeIso(objectToArray<MediaType>())
     .composeTraversal(
-      fromTraversable(array)<[string, MediaType]>().filter(
-        i => mediaTypes.indexOf(i[0]) >= 0
+      fromTraversable(array)<[string, MediaType]>().filter(i =>
+        typeof mediaTypes === "boolean"
+          ? mediaTypes
+          : mediaTypes.indexOf(i[0]) >= 0
       )
     )
     .composeLens(valueLens())
@@ -493,7 +496,7 @@ const responseBodyInternal = (
 export const responseBody = (
   info: [string | RegExp, Meth | Meth[]] | string | RegExp,
   responses: (keyof Responses)[],
-  mediaTypes: string[] = [APPLICATION_JSON]
+  mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   responseBodyInternal(o, argumentCoaxer(info), responses, mediaTypes);
 
@@ -518,7 +521,7 @@ export const methodParameter = (
 
 export const requestBody = (
   info: [string | RegExp, Meth | Meth[]] | string | RegExp,
-  mediaTypes: string[] = [APPLICATION_JSON]
+  mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   requestBodyInternal(o, argumentCoaxer(info), mediaTypes);
 
