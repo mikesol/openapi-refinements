@@ -19,6 +19,7 @@
     "monocle-ts": "^2.0.0"
   },
   "scripts": {
+    "compile": "tsc",
     "lint:fix": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest",
