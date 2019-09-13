@@ -10,7 +10,8 @@ import {
   oneOfKeep,
   oneOfReject,
   responseBody,
-  methodParameter
+  methodParameter,
+  changeEnum
 } from "../src";
 import petstore from "./petstore";
 
@@ -173,6 +174,19 @@ test("changeMaxItems changes max items on nested object", () => {
   ).toBe(undefined);
 });
 
+test("changing an enum is possible", () => {
+  const refined = changeEnum(["cute"], true)(
+    petstore,
+    responseBody("/pets", ["200"]),
+    [Arr, "tags", Arr]
+  );
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items.properties.tags.items.enum
+  ).toEqual(["cute"]);
+});
+
 test("changeRequiredStatus changes required status on nested object", () => {
   const refined = changeRequiredStatus("tags")(
     petstore,
@@ -204,7 +218,7 @@ test("changeToConst accepts const with empty array", () => {
 test("changeToConst accepts const with full array", () => {
   const refined = changeToConst([
     { id: 0, name: "Fluffy" },
-    { id: 1, name: "Trix", tags: ["foo", "bar"] }
+    { id: 1, name: "Trix", tags: ["cute", "sad"] }
   ])(petstore, responseBody("/pets", ["200"]), []);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -225,7 +239,7 @@ test("changeToConst accepts const with full array", () => {
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
     ].schema.items[1].properties.tags.items[0].enum[0]
-  ).toBe("foo");
+  ).toBe("cute");
 });
 
 test("changeListToTuple length is correct", () => {
@@ -277,13 +291,13 @@ test("whittling oneOf with reject is correct", () => {
   ).toEqual("#/components/schemas/Error3");
 });
 
-test("changingAParameterIsPossible", () => {
+test("changing a parameter is possible", () => {
   const refined = changeToConst(42)(
     petstore,
     methodParameter("/pets", "limit", "query"),
     []
   );
-  expect(
-    (<any>refined).paths["/pets"].get.parameters[0].schema.enum[0]
-  ).toBe(42);
+  expect((<any>refined).paths["/pets"].get.parameters[0].schema.enum[0]).toBe(
+    42
+  );
 });

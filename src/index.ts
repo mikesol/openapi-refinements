@@ -13,7 +13,9 @@ import {
   isSchema,
   MediaType,
   Parameter,
-  isParameter
+  isParameter,
+  RequestBody,
+  isRequestBody
 } from "loas3/dist/generated/full";
 
 import jsonschema from "jsonschema";
@@ -90,6 +92,18 @@ const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
     _getParameterFromRef
   );
 
+const getRequestBodyFromRef = (
+  o: OpenAPIObject,
+  d: string
+): Option<RequestBody> =>
+  getComponentFromRef(
+    o,
+    d,
+    a => (a.requestBodies ? some(a.requestBodies) : none),
+    _getRequestBodyFromRef
+  );
+
+const _getRequestBodyFromRef = internalGetComponent(getRequestBodyFromRef);
 const _getResponseFromRef = internalGetComponent(getResponseFromRef);
 const _getParameterFromRef = internalGetComponent(getParameterFromRef);
 /// TODO: combine with above?
@@ -154,6 +168,26 @@ const topLevelParameterInternal = (
     inn
   );
 
+const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]]) =>
+  lensToOperations(info)
+    .composeOptional(Optional.fromNullableProp<Operation>()("requestBody"))
+    .composePrism(
+      new Prism<Reference | RequestBody, RequestBody>(
+        s =>
+          isRequestBody(s)
+            ? some(s)
+            : isReference(s)
+            ? getRequestBodyFromRef(o, s.$ref.split("/")[3])
+            : none,
+        a => a
+      )
+    )
+    .composeOptional(Optional.fromNullableProp<RequestBody>()("content"))
+    // TODO: this is a code dup from elsewhere...
+    .composeOptional(
+      Optional.fromNullableProp<Record<string, MediaType>>()("application/json")
+    )
+    .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 const methodParameterInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
@@ -454,6 +488,11 @@ export const methodParameter = (
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   methodParameterInternal(o, argumentCoaxer(info), name, inn);
 
+export const requestBody = (
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  requestBodyInternal(o, argumentCoaxer(info));
+
 const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
 ) => (
@@ -478,10 +517,23 @@ const changeSingleSchema = (
         )
     )(o);
 
+const cEnum = (a: any[], keep: boolean) => (s: Schema): Schema => ({
+  ...s,
+  ...(s.enum
+    ? {
+        enum: s.enum.filter(i =>
+          keep ? a.indexOf(i) >= 0 : a.indexOf(i) === -1
+        )
+      }
+    : {})
+});
+
 export const changeMinItems = (i: number) =>
   changeSingleSchema(addOpenApi(minItems(i)));
 export const changeMaxItems = (i: number) =>
   changeSingleSchema(addOpenApi(maxItems(i)));
+export const changeEnum = (a: any[], keep: boolean) =>
+  changeSingleSchema(addOpenApi(cEnum(a, keep)));
 export const changeRequiredStatus = (s: string) =>
   changeSingleSchema(addOpenApi(requiredStatus(s)));
 export const changeToConst = (v: JSONValue) => changeSingleSchema(toConst(v));

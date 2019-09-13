@@ -147,7 +147,8 @@ const petstore: OpenAPIObject = {
           tags: {
             type: "array",
             items: {
-              type: "string"
+              type: "string",
+              enum: ["cute", "happy", "sad"]
             }
           }
         }
