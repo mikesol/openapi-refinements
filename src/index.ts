@@ -11,7 +11,9 @@ import {
   Components,
   Schema,
   isSchema,
-  MediaType
+  MediaType,
+  Parameter,
+  isParameter
 } from "loas3/dist/generated/full";
 
 import jsonschema from "jsonschema";
@@ -42,36 +44,54 @@ const valueLens = <T>() =>
 type Meth = "get" | "post" | "put" | "delete";
 const metha: Meth[] = ["get", "post", "put", "delete"];
 
-const _getResponseFromRef = (
-  o: OpenAPIObject,
-  i: Response | Reference
-): Option<Response> =>
-  i
-    ? isReference(i)
-      ? getResponseFromRef(o, i.$ref.split("/")[3])
-      : some(i)
-    : none;
+const internalGetComponent = <C>(
+  f: (o: OpenAPIObject, d: string) => Option<C>
+) => (o: OpenAPIObject, i: C | Reference): Option<C> =>
+  i ? (isReference(i) ? f(o, i.$ref.split("/")[3]) : some(i)) : none;
 
-const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
+const getComponentFromRef = <C>(
+  o: OpenAPIObject,
+  d: string,
+  accessor: (o: Components) => Option<Record<string, Reference | C>>,
+  getter: (o: OpenAPIObject, i: C | Reference) => Option<C>
+): Option<C> =>
   new Getter((a: OpenAPIObject) => (a.components ? some(a.components) : none))
-    .composeGetter<Option<Record<string, Response | Reference>>>(
+    .composeGetter<Option<Record<string, C | Reference>>>(
       new Getter(
-        fold<Components, Option<Record<string, Response | Reference>>>(
+        fold<Components, Option<Record<string, C | Reference>>>(
           () => none,
-          a => (a.responses ? some(a.responses) : none)
+          a => accessor(a)
         )
       )
     )
-    .composeGetter<Option<Response>>(
+    .composeGetter<Option<C>>(
       new Getter(
-        fold<Record<string, Response | Reference>, Option<Response>>(
+        fold<Record<string, C | Reference>, Option<C>>(
           () => none,
-          a => _getResponseFromRef(o, a[d])
+          a => getter(o, a[d])
         )
       )
     )
     .get(o);
 
+const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
+  getComponentFromRef(
+    o,
+    d,
+    a => (a.responses ? some(a.responses) : none),
+    _getResponseFromRef
+  );
+
+const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
+  getComponentFromRef(
+    o,
+    d,
+    a => (a.parameters ? some(a.parameters) : none),
+    _getParameterFromRef
+  );
+
+const _getResponseFromRef = internalGetComponent(getResponseFromRef);
+const _getParameterFromRef = internalGetComponent(getParameterFromRef);
 /// TODO: combine with above?
 
 const _getSchemaFromRef = (
@@ -104,13 +124,36 @@ const getSchemaFromRef = (o: OpenAPIObject, d: string): Option<Schema> =>
     )
     .get(o);
 
-const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
+const lensToPath = (path: RegExp) =>
   Lens.fromProp<OpenAPIObject>()("paths")
     .composeIso(objectToArray())
     .composeTraversal(
       fromTraversable(array)<[string, PathItem]>().filter(i => path.test(i[0]))
     )
-    .composeLens(valueLens())
+    .composeLens(valueLens());
+
+const topLevelParameterInternal = (
+  o: OpenAPIObject,
+  info: [RegExp, Meth[]],
+  responses: (keyof Responses)[]
+) =>
+  lensToPath(info[0])
+    .composeOptional(Optional.fromNullableProp<PathItem>()("parameters"))
+    .composeTraversal(fromTraversable(array)<Reference | Parameter>())
+    .composePrism(
+      new Prism<Reference | Parameter, Parameter>(
+        s =>
+          isParameter(s)
+            ? some(s)
+            : isReference(s)
+            ? getParameterFromRef(o, s.$ref.split("/")[3])
+            : none,
+        a => a
+      )
+    );
+
+const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
+  lensToPath(path)
     .composeIso(objectToArray<any>())
     .composeTraversal(
       fromTraversable(array)<[string, any]>().filter(
@@ -313,7 +356,7 @@ const drillDownSchemaOneLevel = (
     : typeof i === "number"
     ? drillDownSchemaItems(o, i)
     : drillDownSchemaProperty(o, i);
-const downToSchema = (
+const responseBodyInternal = (
   o: OpenAPIObject,
   info: [RegExp, Meth[]],
   responses: (keyof Responses)[]
@@ -327,7 +370,7 @@ const downToSchema = (
     )
     .composeLens(valueLens())
     .composePrism(
-      new Prism<any, Response>(
+      new Prism(
         s =>
           isResponse(s)
             ? some(s)
@@ -343,15 +386,27 @@ const downToSchema = (
     )
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 
+export const responseBody = (
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  responses: (keyof Responses)[]
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  responseBodyInternal(o, argumentCoaxer(info), responses);
+
+/*
+export const topLevelParameter = (
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  responses: (keyof Responses)[]
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  topLevelParameterInternal(o, argumentCoaxer(info), responses);
+*/
 const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
 ) => (
   o: OpenAPIObject,
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
-  responses: (keyof Responses)[],
+  traversal: (o: OpenAPIObject) => Traversal<OpenAPIObject, Reference | Schema>,
   path: (string | typeof Arr)[]
 ) =>
-  downToSchema(o, argumentCoaxer(info), responses)
+  traversal(o)
     .composePrism(
       new Prism(
         s =>

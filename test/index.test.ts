@@ -8,7 +8,8 @@ import {
   changeToConst,
   changeListToTuple,
   oneOfKeep,
-  oneOfReject
+  oneOfReject,
+  responseBody
 } from "../src";
 import petstore from "./petstore";
 
@@ -142,7 +143,11 @@ test("everything is composeable", () => {
 });
 
 test("changeMinItems changes min items", () => {
-  const refined = changeMinItems(5)(petstore, "/pets", ["200"], []);
+  const refined = changeMinItems(5)(
+    petstore,
+    responseBody("/pets", ["200"]),
+    []
+  );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -151,7 +156,10 @@ test("changeMinItems changes min items", () => {
 });
 
 test("changeMaxItems changes max items on nested object", () => {
-  const refined = changeMaxItems(63)(petstore, "/pets", ["200"], [Arr, "tags"]);
+  const refined = changeMaxItems(63)(petstore, responseBody("/pets", ["200"]), [
+    Arr,
+    "tags"
+  ]);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -167,8 +175,7 @@ test("changeMaxItems changes max items on nested object", () => {
 test("changeRequiredStatus changes required status on nested object", () => {
   const refined = changeRequiredStatus("tags")(
     petstore,
-    "/pets",
-    ["200"],
+    responseBody("/pets", ["200"]),
     [Arr]
   );
   expect(
@@ -181,7 +188,11 @@ test("changeRequiredStatus changes required status on nested object", () => {
 });
 
 test("changeToConst accepts const with empty array", () => {
-  const refined = changeToConst([])(petstore, "/pets", ["200"], []);
+  const refined = changeToConst([])(
+    petstore,
+    responseBody("/pets", ["200"]),
+    []
+  );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -193,7 +204,7 @@ test("changeToConst accepts const with full array", () => {
   const refined = changeToConst([
     { id: 0, name: "Fluffy" },
     { id: 1, name: "Trix", tags: ["foo", "bar"] }
-  ])(petstore, "/pets", ["200"], []);
+  ])(petstore, responseBody("/pets", ["200"]), []);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -217,7 +228,11 @@ test("changeToConst accepts const with full array", () => {
 });
 
 test("changeListToTuple length is correct", () => {
-  const refined = changeListToTuple(5)(petstore, "/pets", ["200"], []);
+  const refined = changeListToTuple(5)(
+    petstore,
+    responseBody("/pets", ["200"]),
+    []
+  );
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -226,7 +241,11 @@ test("changeListToTuple length is correct", () => {
 });
 
 test("whittling oneOf with keep is correct", () => {
-  const refined = oneOfKeep([0, 3, 4])(petstore, "/pets/{petId}", ["default"], []);
+  const refined = oneOfKeep([0, 3, 4])(
+    petstore,
+    responseBody("/pets/{petId}", ["default"]),
+    []
+  );
   expect(
     (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
       "application/json"
@@ -239,9 +258,12 @@ test("whittling oneOf with keep is correct", () => {
   ).toEqual("#/components/schemas/Error5");
 });
 
-
 test("whittling oneOf with reject is correct", () => {
-  const refined = oneOfReject([0, 3, 4])(petstore, "/pets/{petId}", ["default"], []);
+  const refined = oneOfReject([0, 3, 4])(
+    petstore,
+    responseBody("/pets/{petId}", ["default"]),
+    []
+  );
   expect(
     (<any>refined).paths["/pets/{petId}"].get.responses["default"].content[
       "application/json"
