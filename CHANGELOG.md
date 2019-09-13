@@ -1,0 +1,9 @@
+# CHANGELOG
+
+## `v0.0.1`
+
+* Exposes more functions.
+
+## `v0.0.0`
+
+* Initial release.

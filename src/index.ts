@@ -348,10 +348,10 @@ const toConstInternal = (
     ? valAsConst(val)
     : s;
 
-const changeRef = (j: Reference): Reference => ({
+export const changeRef = (j: Reference): Reference => ({
   $ref: `#/definitions/${j.$ref.split("/")[3]}`
 });
-const changeRefs = (j: Schema): Schema => ({
+export const changeRefs = (j: Schema): Schema => ({
   ...j,
   ...(isReference(j.additionalProperties)
     ? changeRef(j.additionalProperties)
@@ -525,7 +525,7 @@ export const requestBody = (
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   requestBodyInternal(o, argumentCoaxer(info), mediaTypes);
 
-const changeSingleSchema = (
+export const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
 ) => (
   traversal: (o: OpenAPIObject) => Traversal<OpenAPIObject, Reference | Schema>,
