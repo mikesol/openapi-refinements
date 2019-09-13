@@ -169,7 +169,11 @@ const pathParameterInternal = (
     inn
   );
 
-const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]], mediaTypes: string[]) =>
+const requestBodyInternal = (
+  o: OpenAPIObject,
+  info: [RegExp, Meth[]],
+  mediaTypes: string[]
+) =>
   lensToOperations(info)
     .composeOptional(Optional.fromNullableProp<Operation>()("requestBody"))
     .composePrism(
@@ -187,7 +191,9 @@ const requestBodyInternal = (o: OpenAPIObject, info: [RegExp, Meth[]], mediaType
     // TODO: this is a code dup from elsewhere...
     .composeIso(objectToArray<MediaType>())
     .composeTraversal(
-      fromTraversable(array)<[string, MediaType]>().filter(i => mediaTypes.indexOf(i[0]) >= 0)
+      fromTraversable(array)<[string, MediaType]>().filter(
+        i => mediaTypes.indexOf(i[0]) >= 0
+      )
     )
     .composeLens(valueLens())
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
@@ -477,7 +483,9 @@ const responseBodyInternal = (
     .composeOptional(Optional.fromNullableProp<Response>()("content"))
     .composeIso(objectToArray<MediaType>())
     .composeTraversal(
-      fromTraversable(array)<[string, MediaType]>().filter(i => mediaTypes.indexOf(i[0]) >= 0)
+      fromTraversable(array)<[string, MediaType]>().filter(
+        i => mediaTypes.indexOf(i[0]) >= 0
+      )
     )
     .composeLens(valueLens())
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
