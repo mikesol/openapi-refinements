@@ -9,7 +9,8 @@ import {
   changeListToTuple,
   oneOfKeep,
   oneOfReject,
-  responseBody
+  responseBody,
+  methodParameter
 } from "../src";
 import petstore from "./petstore";
 
@@ -274,4 +275,15 @@ test("whittling oneOf with reject is correct", () => {
       "application/json"
     ].schema.oneOf[1].$ref
   ).toEqual("#/components/schemas/Error3");
+});
+
+test("changingAParameterIsPossible", () => {
+  const refined = changeToConst(42)(
+    petstore,
+    methodParameter("/pets", "limit", "query"),
+    []
+  );
+  expect(
+    (<any>refined).paths["/pets"].get.parameters[0].schema.enum[0]
+  ).toBe(42);
 });

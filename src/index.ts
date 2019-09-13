@@ -19,7 +19,7 @@ import {
 import jsonschema from "jsonschema";
 
 import { JSONValue } from "json-schema-strictly-typed";
-import { some, none, Option, fold } from "fp-ts/lib/Option";
+import { some, none, Option, fold, isNone } from "fp-ts/lib/Option";
 import { array } from "fp-ts/lib/Array";
 import {
   Lens,
@@ -132,27 +132,69 @@ const lensToPath = (path: RegExp) =>
     )
     .composeLens(valueLens());
 
+const discernParameter = (
+  o: Option<Parameter>,
+  name: string,
+  inn: string
+): Option<Parameter> =>
+  isNone(o) ? o : o.value.in === inn && o.value.name === name ? o : none;
+
 const topLevelParameterInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
-  responses: (keyof Responses)[]
+  path: RegExp,
+  name: string,
+  inn: string
 ) =>
-  lensToPath(info[0])
-    .composeOptional(Optional.fromNullableProp<PathItem>()("parameters"))
+  handleParametersInternal(
+    o,
+    lensToPath(path).composeOptional(
+      Optional.fromNullableProp<PathItem>()("parameters")
+    ),
+    name,
+    inn
+  );
+
+const methodParameterInternal = (
+  o: OpenAPIObject,
+  info: [RegExp, Meth[]],
+  name: string,
+  inn: string
+) =>
+  handleParametersInternal(
+    o,
+    lensToOperations(info).composeOptional(
+      Optional.fromNullableProp<Operation>()("parameters")
+    ),
+    name,
+    inn
+  );
+
+const handleParametersInternal = (
+  o: OpenAPIObject,
+  t: Traversal<OpenAPIObject, (Reference | Parameter)[]>,
+  name: string,
+  inn: string
+) =>
+  t
     .composeTraversal(fromTraversable(array)<Reference | Parameter>())
     .composePrism(
       new Prism<Reference | Parameter, Parameter>(
         s =>
           isParameter(s)
-            ? some(s)
+            ? discernParameter(some(s), name, inn)
             : isReference(s)
-            ? getParameterFromRef(o, s.$ref.split("/")[3])
+            ? discernParameter(
+                getParameterFromRef(o, s.$ref.split("/")[3]),
+                name,
+                inn
+              )
             : none,
         a => a
       )
-    );
+    )
+    .composeOptional(Optional.fromNullableProp<Parameter>()("schema"));
 
-const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
+const lensToOperations = ([path, meths]: [RegExp, Meth[]]) =>
   lensToPath(path)
     .composeIso(objectToArray<any>())
     .composeTraversal(
@@ -163,8 +205,9 @@ const lensToResponses = ([path, meths]: [RegExp, Meth[]]) =>
     .composeLens(valueLens())
     .composePrism(
       new Prism<any, Operation>(s => (isOperation(s) ? some(s) : none), a => a)
-    )
-    .composeLens(Lens.fromProp<Operation>()("responses"));
+    );
+const lensToResponses = (info: [RegExp, Meth[]]) =>
+  lensToOperations(info).composeLens(Lens.fromProp<Operation>()("responses"));
 
 const minItems = (i: number) => (s: Schema): Schema => ({
   ...s,
@@ -392,13 +435,25 @@ export const responseBody = (
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   responseBodyInternal(o, argumentCoaxer(info), responses);
 
-/*
 export const topLevelParameter = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
-  responses: (keyof Responses)[]
+  path: string | RegExp,
+  name: string,
+  inn: string
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  topLevelParameterInternal(o, argumentCoaxer(info), responses);
-*/
+  topLevelParameterInternal(
+    o,
+    path instanceof RegExp ? path : new RegExp(`^${path}$`),
+    name,
+    inn
+  );
+
+export const methodParameter = (
+  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  name: string,
+  inn: string
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  methodParameterInternal(o, argumentCoaxer(info), name, inn);
+
 const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
 ) => (
