@@ -1,4 +1,4 @@
-# open-api-refinements
+# openapi-refinements
 
 Refine OpenAPI schemas to valid sub-OpenAPI scheams.
 
