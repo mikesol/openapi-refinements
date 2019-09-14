@@ -126,16 +126,13 @@ export const getRequestBodyFromRef = (
     _getRequestBodyFromRef
   );
 
-  export const getSchemaFromRef = (
-    o: OpenAPIObject,
-    d: string
-  ): Option<Schema> =>
-    getComponentFromRef(
-      o,
-      d,
-      a => (a.schemas ? some(a.schemas) : none),
-      _getSchemaFromRef
-    );
+export const getSchemaFromRef = (o: OpenAPIObject, d: string): Option<Schema> =>
+  getComponentFromRef(
+    o,
+    d,
+    a => (a.schemas ? some(a.schemas) : none),
+    _getSchemaFromRef
+  );
 
 const _getRequestBodyFromRef = internalGetComponent(getRequestBodyFromRef);
 const _getResponseFromRef = internalGetComponent(getResponseFromRef);
