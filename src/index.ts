@@ -126,40 +126,22 @@ export const getRequestBodyFromRef = (
     _getRequestBodyFromRef
   );
 
+  export const getSchemaFromRef = (
+    o: OpenAPIObject,
+    d: string
+  ): Option<Schema> =>
+    getComponentFromRef(
+      o,
+      d,
+      a => (a.schemas ? some(a.schemas) : none),
+      _getSchemaFromRef
+    );
+
 const _getRequestBodyFromRef = internalGetComponent(getRequestBodyFromRef);
 const _getResponseFromRef = internalGetComponent(getResponseFromRef);
 const _getParameterFromRef = internalGetComponent(getParameterFromRef);
+const _getSchemaFromRef = internalGetComponent(getSchemaFromRef);
 /// TODO: combine with above?
-
-const _getSchemaFromRef = (
-  o: OpenAPIObject,
-  i: Schema | Reference
-): Option<Schema> =>
-  i
-    ? isReference(i)
-      ? getSchemaFromRef(o, i.$ref.split("/")[3])
-      : some(i)
-    : none;
-
-const getSchemaFromRef = (o: OpenAPIObject, d: string): Option<Schema> =>
-  new Getter((a: OpenAPIObject) => (a.components ? some(a.components) : none))
-    .composeGetter<Option<Record<string, Schema | Reference>>>(
-      new Getter(
-        fold<Components, Option<Record<string, Schema | Reference>>>(
-          () => none,
-          a => (a.schemas ? some(a.schemas) : none)
-        )
-      )
-    )
-    .composeGetter<Option<Schema>>(
-      new Getter(
-        fold<Record<string, Schema | Reference>, Option<Schema>>(
-          () => none,
-          a => _getSchemaFromRef(o, a[d])
-        )
-      )
-    )
-    .get(o);
 
 const lensToPath = (path: RegExp) =>
   Lens.fromProp<OpenAPIObject>()("paths")

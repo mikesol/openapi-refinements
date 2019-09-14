@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## `v0.0.6`
+
+* Exposes even more functions.
+
+## `v0.0.5`
+
+* Exposes even more functions.
+
 ## `v0.0.4`
 
 * Bugfix
