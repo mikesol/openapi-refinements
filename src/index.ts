@@ -93,7 +93,10 @@ export const getComponentFromRef = <C>(
     )
     .get(o);
 
-export const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
+export const getResponseFromRef = (
+  o: OpenAPIObject,
+  d: string
+): Option<Response> =>
   getComponentFromRef(
     o,
     d,
@@ -101,7 +104,10 @@ export const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response
     _getResponseFromRef
   );
 
-export const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
+export const getParameterFromRef = (
+  o: OpenAPIObject,
+  d: string
+): Option<Parameter> =>
   getComponentFromRef(
     o,
     d,
