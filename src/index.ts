@@ -50,7 +50,7 @@ export type MethodNames =
   | "delete"
   | "options"
   | "head"
-  | "path"
+  | "patch"
   | "trace";
 export const allMethods: MethodNames[] = [
   "get",
@@ -59,7 +59,7 @@ export const allMethods: MethodNames[] = [
   "delete",
   "options",
   "head",
-  "path",
+  "patch",
   "trace"
 ];
 

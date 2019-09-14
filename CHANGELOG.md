@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.3`
+
+* Makes importable
+
 ## `v0.0.2`
 
 * Exposes even more functions.
