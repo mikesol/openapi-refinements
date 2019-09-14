@@ -34,17 +34,17 @@ import {
 } from "monocle-ts";
 
 const APPLICATION_JSON = "application/json";
-const objectToArray = <T>() =>
+export const objectToArray = <T>() =>
   new Iso<Record<string, T>, [string, T][]>(
     s => Object.entries(s),
     a => a.reduce((q, r) => ({ ...q, [r[0]]: r[1] }), {})
   );
 
-const valueLens = <T>() =>
+export const valueLens = <T>() =>
   new Lens<[string, T], T>(s => s[1], a => s => [s[0], a]);
 
-type Meth = "get" | "post" | "put" | "delete";
-const metha: Meth[] = ["get", "post", "put", "delete"];
+export type MethodNames = "get" | "post" | "put" | "delete" | "options" | "head" | "path" | "trace";
+export const allMethods: MethodNames[] = ["get", "post", "put", "delete", "options", "head", "path", "trace"];
 
 const internalGetComponent = <C>(
   f: (o: OpenAPIObject, d: string) => Option<C>
@@ -170,7 +170,7 @@ const pathParameterInternal = (
 
 const requestBodyInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   mediaTypes: string[] | boolean
 ) =>
   lensToOperations(info)
@@ -201,7 +201,7 @@ const requestBodyInternal = (
 
 const methodParameterInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   name: string,
   inn: string
 ) =>
@@ -239,7 +239,7 @@ const handleParametersInternal = (
     )
     .composeOptional(Optional.fromNullableProp<Parameter>()("schema"));
 
-const lensToOperations = ([path, meths]: [RegExp, Meth[]]) =>
+const lensToOperations = ([path, meths]: [RegExp, MethodNames[]]) =>
   lensToPath(path)
     .composeIso(objectToArray<any>())
     .composeTraversal(
@@ -251,7 +251,7 @@ const lensToOperations = ([path, meths]: [RegExp, Meth[]]) =>
     .composePrism(
       new Prism<any, Operation>(s => (isOperation(s) ? some(s) : none), a => a)
     );
-const lensToResponses = (info: [RegExp, Meth[]]) =>
+const lensToResponses = (info: [RegExp, MethodNames[]]) =>
   lensToOperations(info).composeLens(Lens.fromProp<Operation>()("responses"));
 
 const minItems = (i: number) => (s: Schema): Schema => ({
@@ -458,7 +458,7 @@ const drillDownSchemaOneLevel = (
     : drillDownSchemaProperty(o, i);
 const responseBodyInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   responses: (keyof Responses)[],
   mediaTypes: string[] | boolean
 ) =>
@@ -494,7 +494,7 @@ const responseBodyInternal = (
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 
 export const responseBody = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
   responses: (keyof Responses)[],
   mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
@@ -513,14 +513,14 @@ export const pathParameter = (
   );
 
 export const methodParameter = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
   name: string,
   inn: string
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   methodParameterInternal(o, argumentCoaxer(info), name, inn);
 
 export const requestBody = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp,
+  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
   mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   requestBodyInternal(o, argumentCoaxer(info), mediaTypes);
@@ -570,7 +570,7 @@ export const changeRequiredStatus = (s: string) =>
 export const changeToConst = (v: JSONValue) => changeSingleSchema(toConst(v));
 const codesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   responsesMap: (z: Responses) => Responses
 ) => lensToResponses(info).modify(responsesMap)(o);
 export const changeListToTuple = (i: number) =>
@@ -585,10 +585,10 @@ export const oneOfReject = (i: number[]) =>
   changeSingleSchema(addOpenApi(changeAnyOne(i, "oneOf", false)));
 
 const argumentCoaxer = (
-  info: [string | RegExp, Meth | Meth[]] | string | RegExp
-): [RegExp, Meth[]] =>
+  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp
+): [RegExp, MethodNames[]] =>
   typeof info === "string" || info instanceof RegExp
-    ? [info instanceof RegExp ? info : new RegExp(`^${info}$`), metha]
+    ? [info instanceof RegExp ? info : new RegExp(`^${info}$`), allMethods]
     : [
         info[0] instanceof RegExp ? info[0] : new RegExp(`^${info[0]}$`),
         info[1] instanceof Array ? info[1] : [info[1]]
@@ -596,7 +596,7 @@ const argumentCoaxer = (
 
 const includeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   r: (keyof Responses)[]
 ) =>
   codesInternal(o, info, z =>
@@ -604,7 +604,7 @@ const includeCodesInternal = (
   );
 
 export const includeCodes = (
-  info: [string | RegExp, Meth] | string | RegExp,
+  info: [string | RegExp, MethodNames] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
   includeCodesInternal(o, argumentCoaxer(info), r);
@@ -617,12 +617,12 @@ const removeCode = (r: Responses, c: keyof Responses) => {
 
 const removeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, Meth[]],
+  info: [RegExp, MethodNames[]],
   r: (keyof Responses)[]
 ) => codesInternal(o, info, z => r.reduce(removeCode, z));
 
 export const removeCodes = (
-  info: [string | RegExp, Meth] | string | RegExp,
+  info: [string | RegExp, MethodNames] | string | RegExp,
   r: (keyof Responses)[]
 ) => (o: OpenAPIObject): OpenAPIObject =>
   removeCodesInternal(o, argumentCoaxer(info), r);

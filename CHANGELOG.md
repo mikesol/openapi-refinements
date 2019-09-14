@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.2`
+
+* Exposes even more functions.
+
 ## `v0.0.1`
 
 * Exposes more functions.
