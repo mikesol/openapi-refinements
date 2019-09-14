@@ -43,8 +43,25 @@ export const objectToArray = <T>() =>
 export const valueLens = <T>() =>
   new Lens<[string, T], T>(s => s[1], a => s => [s[0], a]);
 
-export type MethodNames = "get" | "post" | "put" | "delete" | "options" | "head" | "path" | "trace";
-export const allMethods: MethodNames[] = ["get", "post", "put", "delete", "options", "head", "path", "trace"];
+export type MethodNames =
+  | "get"
+  | "post"
+  | "put"
+  | "delete"
+  | "options"
+  | "head"
+  | "path"
+  | "trace";
+export const allMethods: MethodNames[] = [
+  "get",
+  "post",
+  "put",
+  "delete",
+  "options",
+  "head",
+  "path",
+  "trace"
+];
 
 const internalGetComponent = <C>(
   f: (o: OpenAPIObject, d: string) => Option<C>
