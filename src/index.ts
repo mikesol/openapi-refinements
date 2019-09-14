@@ -63,12 +63,12 @@ export const allMethods: MethodNames[] = [
   "trace"
 ];
 
-const internalGetComponent = <C>(
+export const internalGetComponent = <C>(
   f: (o: OpenAPIObject, d: string) => Option<C>
 ) => (o: OpenAPIObject, i: C | Reference): Option<C> =>
   i ? (isReference(i) ? f(o, i.$ref.split("/")[3]) : some(i)) : none;
 
-const getComponentFromRef = <C>(
+export const getComponentFromRef = <C>(
   o: OpenAPIObject,
   d: string,
   accessor: (o: Components) => Option<Record<string, Reference | C>>,
@@ -93,7 +93,7 @@ const getComponentFromRef = <C>(
     )
     .get(o);
 
-const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
+export const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
   getComponentFromRef(
     o,
     d,
@@ -101,7 +101,7 @@ const getResponseFromRef = (o: OpenAPIObject, d: string): Option<Response> =>
     _getResponseFromRef
   );
 
-const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
+export const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
   getComponentFromRef(
     o,
     d,
@@ -109,7 +109,7 @@ const getParameterFromRef = (o: OpenAPIObject, d: string): Option<Parameter> =>
     _getParameterFromRef
   );
 
-const getRequestBodyFromRef = (
+export const getRequestBodyFromRef = (
   o: OpenAPIObject,
   d: string
 ): Option<RequestBody> =>

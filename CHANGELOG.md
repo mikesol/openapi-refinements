@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.4`
+
+* Bugfix
+
 ## `v0.0.3`
 
 * Makes importable
