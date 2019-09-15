@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.11`
+
+* Fixes bug in change const.
+
 ## `v0.0.10`
 
 * Makes API for traversals consistent.
