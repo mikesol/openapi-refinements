@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.8`
+
+* Adds additional output type to responses.
+
 ## `v0.0.7`
 
 * Makes valueLens generic.

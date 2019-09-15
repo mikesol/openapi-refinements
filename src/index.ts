@@ -461,14 +461,14 @@ const drillDownSchemaOneLevel = (
 const responseBodyInternal = (
   o: OpenAPIObject,
   info: [RegExp, MethodNames[]],
-  responses: (keyof Responses)[],
+  responses: (keyof Responses)[] | boolean,
   mediaTypes: string[] | boolean
 ) =>
   lensToResponses(info)
     .composeIso(objectToArray<any>())
     .composeTraversal(
       fromTraversable(array)<[string, any]>().filter(
-        i => responses.map(z => `${z}`).indexOf(i[0]) !== -1
+        i => typeof responses === "boolean" ? responses : responses.map(z => `${z}`).indexOf(i[0]) !== -1
       )
     )
     .composeLens(valueLens())
@@ -497,7 +497,7 @@ const responseBodyInternal = (
 
 export const responseBody = (
   info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
-  responses: (keyof Responses)[],
+  responses: (keyof Responses)[] | boolean = true,
   mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   responseBodyInternal(o, argumentCoaxer(info), responses, mediaTypes);
