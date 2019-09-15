@@ -16,7 +16,7 @@ import {
 import petstore from "./petstore";
 
 test("removeCodes removes 200 and 201 everywhere", () => {
-  const refined = removeCodes("/pets", ["200", "201"])(petstore);
+  const refined = removeCodes("/pets", true, ["200", "201"])(petstore);
   const refinedResponsesGet =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -44,7 +44,7 @@ test("removeCodes removes 200 and 201 everywhere", () => {
 });
 
 test("removeCodes removes 200", () => {
-  const refined = removeCodes(["/pets", "get"], ["200"])(petstore);
+  const refined = removeCodes("/pets", "get", ["200"])(petstore);
   const refinedResponses =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -60,7 +60,7 @@ test("removeCodes removes 200", () => {
 });
 
 test("removeCodes removes all codes", () => {
-  const refined = removeCodes(["/pets", "get"], ["200", "default"])(petstore);
+  const refined = removeCodes("/pets", "get", ["200", "default"])(petstore);
   const refinedResponses =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -70,7 +70,7 @@ test("removeCodes removes all codes", () => {
 });
 
 test("includeCodes includes 200", () => {
-  const refined = includeCodes(["/pets", "get"], ["200"])(petstore);
+  const refined = includeCodes("/pets", "get", ["200"])(petstore);
   const responses =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -86,9 +86,9 @@ test("includeCodes includes 200", () => {
 });
 
 test("includeCodes works on regex", () => {
-  const refined = includeCodes(new RegExp("[a-zA-Z0-9/{}]*"), ["default"])(
-    petstore
-  );
+  const refined = includeCodes(new RegExp("[a-zA-Z0-9/{}]*"), true, [
+    "default"
+  ])(petstore);
   const petsResponses =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -104,7 +104,7 @@ test("includeCodes works on regex", () => {
 });
 
 test("includeCodes includes all codes", () => {
-  const refined = includeCodes(["/pets", "get"], ["200", "default"])(petstore);
+  const refined = includeCodes("/pets", "get", ["200", "default"])(petstore);
   const responses =
     (refined.paths["/pets"] &&
       refined.paths["/pets"].get &&
@@ -115,8 +115,8 @@ test("includeCodes includes all codes", () => {
 
 test("everything is composeable", () => {
   const refined = [
-    includeCodes(["/pets", "get"], ["200"]),
-    removeCodes(["/pets", "post"], ["201"])
+    includeCodes("/pets", "get", ["200"]),
+    removeCodes("/pets", "post", ["201"])
   ].reduce((a, b) => b(a), petstore);
   const refinedResponsesGet =
     (refined.paths["/pets"] &&
@@ -145,7 +145,7 @@ test("everything is composeable", () => {
 });
 
 test("changeMinItems changes min items", () => {
-  const refined = changeMinItems(5)(responseBody("/pets", ["200"]), [])(
+  const refined = changeMinItems(5)(responseBody("/pets", true, ["200"]), [])(
     petstore
   );
   expect(
@@ -156,7 +156,7 @@ test("changeMinItems changes min items", () => {
 });
 
 test("changeMaxItems changes max items on nested object", () => {
-  const refined = changeMaxItems(63)(responseBody("/pets", ["200"]), [
+  const refined = changeMaxItems(63)(responseBody("/pets", true, ["200"]), [
     Arr,
     "tags"
   ])(petstore);
@@ -173,11 +173,10 @@ test("changeMaxItems changes max items on nested object", () => {
 });
 
 test("changing an enum is possible", () => {
-  const refined = changeEnum(["cute"], true)(responseBody("/pets", ["200"]), [
-    Arr,
-    "tags",
-    Arr
-  ])(petstore);
+  const refined = changeEnum(["cute"], true)(
+    responseBody("/pets", true, ["200"]),
+    [Arr, "tags", Arr]
+  )(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -186,9 +185,10 @@ test("changing an enum is possible", () => {
 });
 
 test("changeRequiredStatus changes required status on nested object", () => {
-  const refined = changeRequiredStatus("tags")(responseBody("/pets", ["200"]), [
-    Arr
-  ])(petstore);
+  const refined = changeRequiredStatus("tags")(
+    responseBody("/pets", true, ["200"]),
+    [Arr]
+  )(petstore);
   expect(
     new Set(
       (<any>refined).paths["/pets"].get.responses["200"].content[
@@ -199,7 +199,7 @@ test("changeRequiredStatus changes required status on nested object", () => {
 });
 
 test("changeToConst accepts const with empty array", () => {
-  const refined = changeToConst([])(responseBody("/pets", ["200"]), [])(
+  const refined = changeToConst([])(responseBody("/pets", true, ["200"]), [])(
     petstore
   );
   expect(
@@ -213,7 +213,7 @@ test("changeToConst accepts const with full array", () => {
   const refined = changeToConst([
     { id: 0, name: "Fluffy" },
     { id: 1, name: "Trix", tags: ["cute", "sad"] }
-  ])(responseBody("/pets", ["200"]), [])(petstore);
+  ])(responseBody("/pets", true, ["200"]), [])(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -242,9 +242,10 @@ test("changeToConst accepts const with full array", () => {
 });
 
 test("changeListToTuple length is correct", () => {
-  const refined = changeListToTuple(5)(responseBody("/pets", ["200"]), [])(
-    petstore
-  );
+  const refined = changeListToTuple(5)(
+    responseBody("/pets", true, ["200"]),
+    []
+  )(petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
@@ -254,7 +255,7 @@ test("changeListToTuple length is correct", () => {
 
 test("whittling oneOf with keep is correct", () => {
   const refined = oneOfKeep([0, 3, 4])(
-    responseBody("/pets/{petId}", ["default"]),
+    responseBody("/pets/{petId}", true, ["default"]),
     []
   )(petstore);
   expect(
@@ -271,7 +272,7 @@ test("whittling oneOf with keep is correct", () => {
 
 test("whittling oneOf with reject is correct", () => {
   const refined = oneOfReject([0, 3, 4])(
-    responseBody("/pets/{petId}", ["default"]),
+    responseBody("/pets/{petId}", true, ["default"]),
     []
   )(petstore);
   expect(
@@ -288,7 +289,7 @@ test("whittling oneOf with reject is correct", () => {
 
 test("changing a parameter is possible", () => {
   const refined = changeToConst(42)(
-    methodParameter("/pets", "limit", "query"),
+    methodParameter("/pets", true, "limit", "query"),
     []
   )(petstore);
   expect((<any>refined).paths["/pets"].get.parameters[0].schema.enum[0]).toBe(

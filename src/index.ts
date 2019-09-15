@@ -140,11 +140,13 @@ const _getParameterFromRef = internalGetComponent(getParameterFromRef);
 const _getSchemaFromRef = internalGetComponent(getSchemaFromRef);
 /// TODO: combine with above?
 
-const lensToPath = (path: RegExp) =>
+const lensToPath = (path: RegExp | boolean) =>
   Lens.fromProp<OpenAPIObject>()("paths")
     .composeIso(objectToArray())
     .composeTraversal(
-      fromTraversable(array)<[string, PathItem]>().filter(i => path.test(i[0]))
+      fromTraversable(array)<[string, PathItem]>().filter(i =>
+        typeof path === "boolean" ? path : path.test(i[0])
+      )
     )
     .composeLens(valueLens());
 
@@ -157,7 +159,7 @@ const discernParameter = (
 
 const pathParameterInternal = (
   o: OpenAPIObject,
-  path: RegExp,
+  path: RegExp | boolean,
   name: string,
   inn: string
 ) =>
@@ -172,10 +174,11 @@ const pathParameterInternal = (
 
 const requestBodyInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
   mediaTypes: string[] | boolean
 ) =>
-  lensToOperations(info)
+  lensToOperations(path, operations)
     .composeOptional(Optional.fromNullableProp<Operation>()("requestBody"))
     .composePrism(
       new Prism<Reference | RequestBody, RequestBody>(
@@ -203,13 +206,14 @@ const requestBodyInternal = (
 
 const methodParameterInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
   name: string,
   inn: string
 ) =>
   handleParametersInternal(
     o,
-    lensToOperations(info).composeOptional(
+    lensToOperations(path, operations).composeOptional(
       Optional.fromNullableProp<Operation>()("parameters")
     ),
     name,
@@ -241,20 +245,30 @@ const handleParametersInternal = (
     )
     .composeOptional(Optional.fromNullableProp<Parameter>()("schema"));
 
-const lensToOperations = ([path, meths]: [RegExp, MethodNames[]]) =>
+const lensToOperations = (
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean
+) =>
   lensToPath(path)
     .composeIso(objectToArray<any>())
     .composeTraversal(
-      fromTraversable(array)<[string, any]>().filter(
-        i => meths.map(z => `${z}`).indexOf(i[0]) !== -1
+      fromTraversable(array)<[string, any]>().filter(i =>
+        typeof operations === "boolean"
+          ? operations
+          : operations.map(z => `${z}`).indexOf(i[0]) !== -1
       )
     )
     .composeLens(valueLens())
     .composePrism(
       new Prism<any, Operation>(s => (isOperation(s) ? some(s) : none), a => a)
     );
-const lensToResponses = (info: [RegExp, MethodNames[]]) =>
-  lensToOperations(info).composeLens(Lens.fromProp<Operation>()("responses"));
+const lensToResponses = (
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean
+) =>
+  lensToOperations(path, operations).composeLens(
+    Lens.fromProp<Operation>()("responses")
+  );
 
 const minItems = (i: number) => (s: Schema): Schema => ({
   ...s,
@@ -342,14 +356,15 @@ const valAsConst = (val: JSONValue): Schema =>
 const toConstInternal = (
   val: JSONValue,
   definitions: Record<string, Reference | Schema>,
-  s: Schema
+  s: Schema,
+  original: Schema
 ): Schema =>
   jsonschema.validate(val, {
     ...s,
     definitions
   }).valid
     ? valAsConst(val)
-    : s;
+    : original;
 
 export const changeRef = (j: Reference): Reference => ({
   $ref: `#/definitions/${j.$ref.split("/")[3]}`
@@ -392,7 +407,8 @@ const toConst = (val: JSONValue) => (o: OpenAPIObject) => (s: Schema): Schema =>
       }),
       {}
     ),
-    changeRefs(s)
+    changeRefs(s),
+    s
   );
 
 const addOpenApi = (a: (s: Schema) => Schema) => (_: OpenAPIObject) => a;
@@ -461,11 +477,12 @@ const drillDownSchemaOneLevel = (
     : drillDownSchemaProperty(o, i);
 const responseBodyInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
-  responses: (keyof Responses)[] | boolean,
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
+  responses: (keyof Responses)[] | boolean | boolean,
   mediaTypes: string[] | boolean
 ) =>
-  lensToResponses(info)
+  lensToResponses(path, operations)
     .composeIso(objectToArray<any>())
     .composeTraversal(
       fromTraversable(array)<[string, any]>().filter(i =>
@@ -499,36 +516,46 @@ const responseBodyInternal = (
     .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
 
 export const responseBody = (
-  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
+  path: string | RegExp | boolean = true,
+  methods: MethodNames | MethodNames[] | boolean = true,
   responses: (keyof Responses)[] | boolean = true,
   mediaTypes: string[] | boolean = [APPLICATION_JSON]
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  responseBodyInternal(o, argumentCoaxer(info), responses, mediaTypes);
+  responseBodyInternal(
+    o,
+    coaxPath(path),
+    coaxMethods(methods),
+    responses,
+    mediaTypes
+  );
 
 export const pathParameter = (
-  path: string | RegExp,
+  path: string | RegExp | boolean,
   name: string,
   inn: string
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  pathParameterInternal(
+  pathParameterInternal(o, coaxPath(path), name, inn);
+
+export const methodParameter = (
+  path: string | RegExp | boolean,
+  operations: MethodNames | MethodNames[] | boolean,
+  name: string,
+  inn: string
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  methodParameterInternal(
     o,
-    path instanceof RegExp ? path : new RegExp(`^${path}$`),
+    coaxPath(path),
+    coaxMethods(operations),
     name,
     inn
   );
 
-export const methodParameter = (
-  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
-  name: string,
-  inn: string
-) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  methodParameterInternal(o, argumentCoaxer(info), name, inn);
-
 export const requestBody = (
-  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp,
-  mediaTypes: string[] | boolean = [APPLICATION_JSON]
+  path: string | RegExp | boolean = true,
+  operations: MethodNames | MethodNames[] | boolean = true,
+  mediaTypes: string[] | boolean = true
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
-  requestBodyInternal(o, argumentCoaxer(info), mediaTypes);
+  requestBodyInternal(o, coaxPath(path), coaxMethods(operations), mediaTypes);
 
 export const changeSingleSchema = (
   s2s: (o: OpenAPIObject) => (s: Schema) => Schema
@@ -575,9 +602,10 @@ export const changeRequiredStatus = (s: string) =>
 export const changeToConst = (v: JSONValue) => changeSingleSchema(toConst(v));
 const codesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
   responsesMap: (z: Responses) => Responses
-) => lensToResponses(info).modify(responsesMap)(o);
+) => lensToResponses(path, operations).modify(responsesMap)(o);
 export const changeListToTuple = (i: number) =>
   changeSingleSchema(addOpenApi(listToTuple(i)));
 export const anyOfKeep = (i: number[]) =>
@@ -589,30 +617,35 @@ export const oneOfKeep = (i: number[]) =>
 export const oneOfReject = (i: number[]) =>
   changeSingleSchema(addOpenApi(changeAnyOne(i, "oneOf", false)));
 
-const argumentCoaxer = (
-  info: [string | RegExp, MethodNames | MethodNames[]] | string | RegExp
-): [RegExp, MethodNames[]] =>
-  typeof info === "string" || info instanceof RegExp
-    ? [info instanceof RegExp ? info : new RegExp(`^${info}$`), allMethods]
-    : [
-        info[0] instanceof RegExp ? info[0] : new RegExp(`^${info[0]}$`),
-        info[1] instanceof Array ? info[1] : [info[1]]
-      ];
+const coaxPath = (path: string | RegExp | boolean) =>
+  typeof path === "string" ? new RegExp(`^${path}$`) : path;
+
+const coaxMethods = (methods: MethodNames | MethodNames[] | boolean) =>
+  typeof methods === "boolean" || methods instanceof Array
+    ? methods
+    : [methods];
 
 const includeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
-  r: (keyof Responses)[]
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
+  r: (keyof Responses)[] | boolean
 ) =>
-  codesInternal(o, info, z =>
-    r.map(i => ({ [i]: z[i] })).reduce((a, b) => ({ ...a, ...b }), {})
+  codesInternal(
+    o,
+    path,
+    operations,
+    typeof r === "boolean"
+      ? z => (r ? z : {})
+      : z => r.map(i => ({ [i]: z[i] })).reduce((a, b) => ({ ...a, ...b }), {})
   );
 
 export const includeCodes = (
-  info: [string | RegExp, MethodNames] | string | RegExp,
-  r: (keyof Responses)[]
+  path: string | RegExp | boolean = true,
+  operations: MethodNames | MethodNames[] | boolean = true,
+  r: (keyof Responses)[] | boolean = true
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  includeCodesInternal(o, argumentCoaxer(info), r);
+  includeCodesInternal(o, coaxPath(path), coaxMethods(operations), r);
 
 const removeCode = (r: Responses, c: keyof Responses) => {
   const out = { ...r };
@@ -622,12 +655,20 @@ const removeCode = (r: Responses, c: keyof Responses) => {
 
 const removeCodesInternal = (
   o: OpenAPIObject,
-  info: [RegExp, MethodNames[]],
-  r: (keyof Responses)[]
-) => codesInternal(o, info, z => r.reduce(removeCode, z));
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
+  r: (keyof Responses)[] | boolean
+) =>
+  codesInternal(
+    o,
+    path,
+    operations,
+    typeof r === "boolean" ? z => (r ? {} : z) : z => r.reduce(removeCode, z)
+  );
 
 export const removeCodes = (
-  info: [string | RegExp, MethodNames] | string | RegExp,
-  r: (keyof Responses)[]
+  path: string | RegExp | boolean = true,
+  operations: MethodNames | MethodNames[] | boolean = true,
+  r: (keyof Responses)[] | boolean = true
 ) => (o: OpenAPIObject): OpenAPIObject =>
-  removeCodesInternal(o, argumentCoaxer(info), r);
+  removeCodesInternal(o, coaxPath(path), coaxMethods(operations), r);

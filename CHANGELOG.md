@@ -1,8 +1,12 @@
 # CHANGELOG
 
+## `v0.0.10`
+
+* Makes API for traversals consistent.
+
 ## `v0.0.9`
 
-Changes bug in constant converter.
+* Changes bug in constant converter.
 
 ## `v0.0.8`
 
