@@ -40,8 +40,8 @@ export const objectToArray = <T>() =>
     a => a.reduce((q, r) => ({ ...q, [r[0]]: r[1] }), {})
   );
 
-export const valueLens = <T>() =>
-  new Lens<[string, T], T>(s => s[1], a => s => [s[0], a]);
+export const valueLens = <A, T>() =>
+  new Lens<[A, T], T>(s => s[1], a => s => [s[0], a]);
 
 export type MethodNames =
   | "get"
