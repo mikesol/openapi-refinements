@@ -467,8 +467,10 @@ const responseBodyInternal = (
   lensToResponses(info)
     .composeIso(objectToArray<any>())
     .composeTraversal(
-      fromTraversable(array)<[string, any]>().filter(
-        i => typeof responses === "boolean" ? responses : responses.map(z => `${z}`).indexOf(i[0]) !== -1
+      fromTraversable(array)<[string, any]>().filter(i =>
+        typeof responses === "boolean"
+          ? responses
+          : responses.map(z => `${z}`).indexOf(i[0]) !== -1
       )
     )
     .composeLens(valueLens())
