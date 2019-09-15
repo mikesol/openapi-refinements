@@ -234,6 +234,11 @@ test("changeToConst accepts const with full array", () => {
       "application/json"
     ].schema.items[1].properties.tags.items[0].enum[0]
   ).toBe("cute");
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[1].required
+  ).toEqual(["id", "name", "tags"]);
 });
 
 test("changeListToTuple length is correct", () => {

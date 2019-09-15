@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.9`
+
+Changes bug in constant converter.
+
 ## `v0.0.8`
 
 * Adds additional output type to responses.

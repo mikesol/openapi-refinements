@@ -334,7 +334,8 @@ const valAsConst = (val: JSONValue): Schema =>
         properties: Object.entries(val).reduce(
           (a, b) => ({ ...a, [b[0]]: valAsConst(b[1]) }),
           {}
-        )
+        ),
+        required: Object.keys(val)
       }
     : { type: "string" };
 
