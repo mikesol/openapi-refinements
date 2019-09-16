@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.12`
+
+* Demotes certain dependencies to peer dependencies.
+
 ## `v0.0.11`
 
 * Fixes bug in change const.
