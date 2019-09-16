@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.14`
+
+* Adds boolean option for path parameters
+
 ## `v0.0.13`
 
 * Fixes reversal bug

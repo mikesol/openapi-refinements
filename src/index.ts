@@ -152,16 +152,21 @@ const lensToPath = (path: RegExp | boolean) =>
 
 const discernParameter = (
   o: Option<Parameter>,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ): Option<Parameter> =>
-  isNone(o) ? o : o.value.in === inn && o.value.name === name ? o : none;
+  isNone(o)
+    ? o
+    : (typeof inn === "boolean" ? inn : o.value.in === inn) &&
+      (typeof name === "boolean" ? name : o.value.name === name)
+    ? o
+    : none;
 
 const pathParameterInternal = (
   o: OpenAPIObject,
   path: RegExp | boolean,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ) =>
   handleParametersInternal(
     o,
@@ -208,8 +213,8 @@ const methodParameterInternal = (
   o: OpenAPIObject,
   path: RegExp | boolean,
   operations: MethodNames[] | boolean,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ) =>
   handleParametersInternal(
     o,
@@ -223,8 +228,8 @@ const methodParameterInternal = (
 const handleParametersInternal = (
   o: OpenAPIObject,
   t: Traversal<OpenAPIObject, (Reference | Parameter)[]>,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ) =>
   t
     .composeTraversal(fromTraversable(array)<Reference | Parameter>())
@@ -531,16 +536,16 @@ export const responseBody = (
 
 export const pathParameter = (
   path: string | RegExp | boolean,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   pathParameterInternal(o, coaxPath(path), name, inn);
 
 export const methodParameter = (
   path: string | RegExp | boolean,
   operations: MethodNames | MethodNames[] | boolean,
-  name: string,
-  inn: string
+  name: string | boolean,
+  inn: string | boolean
 ) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
   methodParameterInternal(
     o,
