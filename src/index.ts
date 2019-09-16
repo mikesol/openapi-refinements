@@ -572,11 +572,10 @@ export const changeSingleSchema = (
       )
     )
     .modify(
-      path
-        .reduceRight(
-          (cur, mxt) => drillDownSchemaOneLevel(o, mxt).modify(cur),
-          s2s(o)
-        )
+      path.reduceRight(
+        (cur, mxt) => drillDownSchemaOneLevel(o, mxt).modify(cur),
+        s2s(o)
+      )
     )(o);
 
 const cEnum = (a: any[], keep: boolean) => (s: Schema): Schema => ({
