@@ -573,8 +573,7 @@ export const changeSingleSchema = (
     )
     .modify(
       path
-        .reverse()
-        .reduce(
+        .reduceRight(
           (cur, mxt) => drillDownSchemaOneLevel(o, mxt).modify(cur),
           s2s(o)
         )

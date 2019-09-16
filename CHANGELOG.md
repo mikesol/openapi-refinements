@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.13`
+
+* Fixes reversal bug
+
 ## `v0.0.12`
 
 * Demotes certain dependencies to peer dependencies.
