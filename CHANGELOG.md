@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.17`
+
+* Makes branch check reference first due to strict type checking in `loas3`. Otherwise, the schema will not validate if it has any extra gunk in it.
+
 ## `v0.0.16`
 
 * Fixes incorrect type in header

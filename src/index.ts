@@ -10,7 +10,6 @@ import {
   isReference,
   Components,
   Schema,
-  isSchema,
   MediaType,
   Parameter,
   isParameter,
@@ -389,22 +388,25 @@ export const changeRef = (j: Reference): Reference => ({
 export const changeRefs = (j: Schema): Schema => ({
   ...j,
   ...(isReference(j.additionalProperties)
-    ? changeRef(j.additionalProperties)
-    : {}),
-  ...(isSchema(j.additionalProperties)
-    ? { additionalProperties: changeRefs(j.additionalProperties) }
-    : {}),
-  ...(isReference(j.items) ? { items: changeRef(j.items) } : {}),
-  ...(isSchema(j.items) ? { items: changeRefs(j.items) } : {}),
-  ...(j.items instanceof Array
-    ? { items: j.items.map(i => (isSchema(i) ? changeRefs(i) : changeRef(i))) }
-    : {}),
+    ? { additionalProperties: changeRef(j.additionalProperties) }
+    : j.additionalProperties === undefined
+    ? {}
+    : typeof j.additionalProperties === "boolean"
+    ? { additionalProperties: {} }
+    : { additionalProperties: changeRefs(j.additionalProperties) }),
+    ...(isReference(j.items)
+    ? { items: changeRef(j.items) }
+    : j.items === undefined
+    ? {}
+    : j.items instanceof Array
+    ? { items: j.items.map(i => (isReference(i) ? changeRef(i) : changeRefs(i))) }
+    : { items: changeRefs(j.items) }),
   ...(j.properties
     ? {
         properties: Object.entries(j.properties).reduce(
           (a, b) => ({
             ...a,
-            [b[0]]: isSchema(b[1]) ? changeRefs(b[1]) : changeRef(b[1])
+            [b[0]]: isReference(b[1]) ? changeRef(b[1]) : changeRefs(b[1])
           }),
           {}
         )
@@ -420,7 +422,7 @@ const toConst = (val: JSONValue) => (o: OpenAPIObject) => (s: Schema): Schema =>
     ).reduce(
       (a, b) => ({
         ...a,
-        [b[0]]: isSchema(b[1]) ? changeRefs(b[1]) : changeRef(b[1])
+        [b[0]]: isReference(b[1]) ? changeRef(b[1]) : changeRefs(b[1])
       }),
       {}
     ),
