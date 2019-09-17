@@ -15,7 +15,9 @@ import {
   Parameter,
   isParameter,
   RequestBody,
-  isRequestBody
+  isRequestBody,
+  Header,
+  isHeader
 } from "loas3/dist/generated/full";
 
 import jsonschema from "jsonschema";
@@ -104,6 +106,14 @@ export const getResponseFromRef = (
     _getResponseFromRef
   );
 
+export const getHeaderFromRef = (o: OpenAPIObject, d: string): Option<Header> =>
+  getComponentFromRef(
+    o,
+    d,
+    a => (a.headers ? some(a.headers) : none),
+    _getHeaderFromRef
+  );
+
 export const getParameterFromRef = (
   o: OpenAPIObject,
   d: string
@@ -138,6 +148,8 @@ const _getRequestBodyFromRef = internalGetComponent(getRequestBodyFromRef);
 const _getResponseFromRef = internalGetComponent(getResponseFromRef);
 const _getParameterFromRef = internalGetComponent(getParameterFromRef);
 const _getSchemaFromRef = internalGetComponent(getSchemaFromRef);
+const _getHeaderFromRef = internalGetComponent(getHeaderFromRef);
+
 /// TODO: combine with above?
 
 const lensToPath = (path: RegExp | boolean) =>
@@ -480,12 +492,12 @@ const drillDownSchemaOneLevel = (
     : typeof i === "number"
     ? drillDownSchemaItems(o, i)
     : drillDownSchemaProperty(o, i);
-const responseBodyInternal = (
+
+const lensToResponse = (
   o: OpenAPIObject,
   path: RegExp | boolean,
   operations: MethodNames[] | boolean,
-  responses: (keyof Responses)[] | boolean | boolean,
-  mediaTypes: string[] | boolean
+  responses: (keyof Responses)[] | boolean | boolean
 ) =>
   lensToResponses(path, operations)
     .composeIso(objectToArray<any>())
@@ -507,7 +519,45 @@ const responseBodyInternal = (
             : none,
         a => a
       )
+    );
+
+const headerInternal = (
+  o: OpenAPIObject,
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
+  responses: (keyof Responses)[] | boolean | boolean,
+  name: string | boolean
+) =>
+  lensToResponse(o, path, operations, responses)
+    .composeOptional(Optional.fromNullableProp<Response>()("headers"))
+    .composeIso(objectToArray())
+    .composeTraversal(
+      fromTraversable(array)<[string, Reference | Header]>().filter(i =>
+        typeof name === "boolean" ? name : name === i[0]
+      )
     )
+    .composeLens(valueLens())
+    .composePrism(
+      new Prism(
+        s =>
+          isHeader(s)
+            ? some(s)
+            : isReference(s)
+            ? getHeaderFromRef(o, s.$ref.split("/")[3])
+            : none,
+        a => a
+      )
+    )
+    .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
+
+const responseBodyInternal = (
+  o: OpenAPIObject,
+  path: RegExp | boolean,
+  operations: MethodNames[] | boolean,
+  responses: (keyof Responses)[] | boolean | boolean,
+  mediaTypes: string[] | boolean
+) =>
+  lensToResponse(o, path, operations, responses)
     .composeOptional(Optional.fromNullableProp<Response>()("content"))
     .composeIso(objectToArray<MediaType>())
     .composeTraversal(
@@ -533,6 +583,14 @@ export const responseBody = (
     responses,
     mediaTypes
   );
+
+export const header = (
+  path: string | RegExp | boolean = true,
+  methods: MethodNames | MethodNames[] | boolean = true,
+  responses: (keyof Responses)[] | boolean = true,
+  name: string | boolean
+) => (o: OpenAPIObject): Traversal<OpenAPIObject, Reference | Schema> =>
+  headerInternal(o, coaxPath(path), coaxMethods(methods), responses, name);
 
 export const pathParameter = (
   path: string | RegExp | boolean,

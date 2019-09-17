@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.15`
+
+* Allows setting of response header
+
 ## `v0.0.14`
 
 * Adds boolean option for path parameters
