@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.18`
+
+* Fixes bug with setting at individual index.
+
 ## `v0.0.17`
 
 * Makes branch check reference first due to strict type checking in `loas3`. Otherwise, the schema will not validate if it has any extra gunk in it.

@@ -469,19 +469,27 @@ const drillDownSchemaAdditionalProperties = drillDownSchemaItemOrAdditionalPrope
   "additionalProperties"
 );
 
-const itemsInternal = (s: Schema | Reference, o: OpenAPIObject) =>
-  isReference(s) ? getSchemaFromRef(o, s.$ref.split("/")[3]) : some(s);
-
 const drillDownSchemaItems = (o: OpenAPIObject, i: number) =>
-  Optional.fromNullableProp<Schema>()("items").composePrism(
-    new Prism(
-      s =>
-        s instanceof Array && s.length < i - 1 && i >= 0
-          ? itemsInternal(s[i], o)
-          : none,
-      a => a
+  Optional.fromNullableProp<Schema>()("items")
+    .composePrism(
+      new Prism<
+        Schema | Reference | (Schema | Reference)[],
+        (Schema | Reference)[]
+      >(a => (a instanceof Array ? some(a) : none), a => a)
     )
-  );
+    .composeOptional(
+      new Optional<(Schema | Reference)[], Schema | Reference>(
+        a => (a[i] ? some(a[i]) : none),
+        a => s => [...[...s].splice(0, i), a, ...[...s].splice(i + 1)]
+      )
+    )
+    .composePrism(
+      new Prism(
+        s =>
+          isReference(s) ? getSchemaFromRef(o, s.$ref.split("/")[3]) : some(s),
+        a => a
+      )
+    );
 
 export const Arr: unique symbol = Symbol();
 export const Addl: unique symbol = Symbol();

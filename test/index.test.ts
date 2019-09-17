@@ -242,15 +242,20 @@ test("changeToConst accepts const with full array", () => {
 });
 
 test("changeListToTuple length is correct", () => {
-  const refined = changeListToTuple(5)(
-    responseBody("/pets", true, ["200"]),
-    []
-  )(petstore);
+  const refined = [
+    changeListToTuple(5)(responseBody("/pets", true, ["200"]), []),
+    changeToConst(42)(responseBody("/pets", true), [2, "id"])
+  ].reduce((a, b) => b(a), petstore);
   expect(
     (<any>refined).paths["/pets"].get.responses["200"].content[
       "application/json"
     ].schema.items.length
   ).toEqual(5);
+  expect(
+    (<any>refined).paths["/pets"].get.responses["200"].content[
+      "application/json"
+    ].schema.items[2].properties.id.enum[0]
+  ).toEqual(42);
 });
 
 test("whittling oneOf with keep is correct", () => {
