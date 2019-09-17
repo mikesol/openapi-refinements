@@ -394,12 +394,14 @@ export const changeRefs = (j: Schema): Schema => ({
     : typeof j.additionalProperties === "boolean"
     ? { additionalProperties: {} }
     : { additionalProperties: changeRefs(j.additionalProperties) }),
-    ...(isReference(j.items)
+  ...(isReference(j.items)
     ? { items: changeRef(j.items) }
     : j.items === undefined
     ? {}
     : j.items instanceof Array
-    ? { items: j.items.map(i => (isReference(i) ? changeRef(i) : changeRefs(i))) }
+    ? {
+        items: j.items.map(i => (isReference(i) ? changeRef(i) : changeRefs(i)))
+      }
     : { items: changeRefs(j.items) }),
   ...(j.properties
     ? {
