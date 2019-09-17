@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## `v0.0.16`
+
+* Fixes incorrect type in header
+
 ## `v0.0.15`
 
 * Allows setting of response header

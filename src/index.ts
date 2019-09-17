@@ -548,7 +548,7 @@ const headerInternal = (
         a => a
       )
     )
-    .composeOptional(Optional.fromNullableProp<MediaType>()("schema"));
+    .composeOptional(Optional.fromNullableProp<Header>()("schema"));
 
 const responseBodyInternal = (
   o: OpenAPIObject,
